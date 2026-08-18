@@ -1,1 +1,33 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Регистрация — EPM</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a></div></header><main class="auth-page"><div class="auth-box"><div class="auth-mark">EPM</div><span class="hero-tag"><span></span> NEW ACCOUNT</span><h1>Регистрация</h1><p>Создай аккаунт EPM, чтобы участвовать в жизни проекта.</p><form id="form"><label for="nickname">Ник</label><input id="nickname" minlength="3" maxlength="24" required autocomplete="username" placeholder="Придумай ник"><label for="password">Пароль</label><input id="password" type="password" minlength="6" required autocomplete="new-password" placeholder="Минимум 6 символов"><label for="confirm">Повтор пароля</label><input id="confirm" type="password" minlength="6" required autocomplete="new-password" placeholder="Повтори пароль"><div id="error" class="form-error"></div><button class="auth-submit" type="submit">Зарегистрироваться</button></form><div class="auth-bottom">Уже есть аккаунт? <a href="login.html">Войти</a></div></div></main><script src="auth.js"></script><script>setupAuth('register')</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Регистрация — EPM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
+<div class="account-links"><a href="login.html">Войти</a></div>
+</header>
+<main class="auth-page">
+<section class="auth-box">
+<div class="hero-tag"><span></span> NEW EPM ACCOUNT</div>
+<h1>Создать аккаунт</h1>
+<p>Зарегистрируйся, чтобы создавать темы, отвечать игрокам и пользоваться профилем.</p>
+<form id="form">
+<div class="auth-field"><label for="nickname">Никнейм</label><input id="nickname" minlength="3" maxlength="24" required autocomplete="username" placeholder="Придумай ник"></div>
+<div class="auth-field"><label for="password">Пароль</label><input id="password" type="password" minlength="6" required autocomplete="new-password" placeholder="Минимум 6 символов"></div>
+<div class="auth-field"><label for="confirm">Повтор пароля</label><input id="confirm" type="password" minlength="6" required autocomplete="new-password" placeholder="Повтори пароль"></div>
+<div id="error" class="auth-error"></div>
+<button class="home-btn auth-submit auth-btn-main" type="submit">Зарегистрироваться</button>
+</form>
+<div class="auth-footer">Уже есть аккаунт? <a href="login.html">Войти</a></div>
+</section>
+</main>
+<script src="auth.js"></script>
+<script>setupAuth('register')</script>
+</body>
+</html>
