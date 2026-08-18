@@ -1,1 +1,107 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080b10"><title>EPM — официальный портал</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a class="active" href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header><main class="container"><section class="hero"><div><span class="eyebrow">EPM COMMUNITY</span><h1>Играй.<br><strong>Общайся.</strong></h1><p>Единый портал EPM: форум, новости, правила, игровые режимы и личный профиль в одном месте.</p><div class="actions"><a class="btn primary" href="forum.html">Перейти на форум</a><button class="btn" id="playButton" type="button">Начать играть</button></div></div><div class="hero-card"><span>EPM</span><small>COMMUNITY</small></div></section><section class="server"><div><span class="eyebrow">GAME SERVER</span><h2>EstamonHost.ru</h2><p>Основной игровой сервер EPM. Подключайся к проекту и играй вместе с сообществом.</p></div><div class="server-stats"><div><b id="players">—</b><span>Онлайн</span></div><div><b id="version">—</b><span>Версия</span></div><div><b>25565</b><span>Порт</span></div></div></section><section class="home-section"><div class="section-head"><div><span class="eyebrow">PROJECT</span><h2>Разделы EPM</h2></div><a class="section-link" href="news.html">Новости →</a></div><div class="news-grid"><a class="news-card" href="forum.html"><span>01 · СООБЩЕСТВО</span><b>Форум</b><p>Темы, обсуждения, вопросы и общение с игроками EPM.</p></a><a class="news-card" href="rules.html"><span>02 · ИНФОРМАЦИЯ</span><b>Правила</b><p>Правила проекта, команды и игровых режимов.</p></a><a class="news-card" href="donate.html"><span>03 · ПОДДЕРЖКА</span><b>Донат</b><p>Привилегии и способы поддержки развития проекта.</p></a><a class="news-card" href="battlepass.html"><span>04 · НАГРАДЫ</span><b>Battle Pass</b><p>Получай XP, повышай уровень и открывай награды EPM.</p></a></div></section></main><footer>EPM © 2026 · Официальный проект</footer><div class="modal" id="guestModal" aria-hidden="true"><div class="modal-box guest-box"><span class="eyebrow">ДОСТУП К ИГРЕ</span><h2>Вы гость</h2><p>Чтобы продолжить и использовать возможности аккаунта, зарегистрируйтесь или войдите.</p><div class="actions"><a class="btn primary" href="register.html">Зарегистрироваться</a><a class="btn" href="login.html">Войти</a></div><button class="modal-close" id="closeGuest" type="button">Закрыть</button></div></div><script src="auth.js"></script><script>(function(){const modal=document.getElementById('guestModal'),play=document.getElementById('playButton'),close=document.getElementById('closeGuest');function open(){modal.classList.add('show');modal.setAttribute('aria-hidden','false')}function hide(){modal.classList.remove('show');modal.setAttribute('aria-hidden','true')}play.addEventListener('click',()=>{if(typeof getToken==='function'&&getToken()){location.href='forum.html'}else open()});close.addEventListener('click',hide);modal.addEventListener('click',e=>{if(e.target===modal)hide()});fetch('/server-info').then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(d.online){document.getElementById('players').textContent=(d.players??0)+'/'+(d.maxPlayers??0);document.getElementById('version').textContent=d.version||'—'}}).catch(()=>{});})();</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090b10">
+<title>EPM — Minecraft Project</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="index.html">EPM</a>
+  <nav>
+    <a class="active" href="index.html">Главная</a>
+    <a href="forum.html">Форум</a>
+    <a href="news.html">Новости</a>
+    <a href="rules.html">Правила</a>
+    <a href="donate.html">Донат</a>
+  </nav>
+  <div class="account-links">
+    <a href="login.html">Войти</a>
+    <a class="account-register" href="register.html">Регистрация</a>
+  </div>
+</header>
+
+<main class="home">
+  <section class="home-hero">
+    <div class="hero-copy">
+      <div class="hero-tag"><span></span> EPM COMMUNITY</div>
+      <h1>Твой мир.<br><strong>Твоя игра.</strong></h1>
+      <p>Игровой проект EPM с собственным сообществом, форумом, режимами и системой наград.</p>
+      <div class="hero-actions">
+        <a class="home-btn home-btn-main" href="forum.html">Открыть форум</a>
+        <button class="home-btn" id="playButton" type="button">Начать играть</button>
+      </div>
+    </div>
+    <div class="hero-server">
+      <div class="server-top"><span>SERVER</span><i id="serverDot"></i></div>
+      <div class="server-name">EstamonHost.ru</div>
+      <div class="server-ip">ESTAMONHOST.RU</div>
+      <div class="server-line"></div>
+      <div class="server-data">
+        <div><b id="players">—</b><small>ОНЛАЙН</small></div>
+        <div><b id="version">—</b><small>ВЕРСИЯ</small></div>
+        <div><b>25565</b><small>ПОРТ</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quick-links">
+    <a href="forum.html"><span>01</span><div><b>Форум</b><small>Общение и темы игроков</small></div><strong>→</strong></a>
+    <a href="rules.html"><span>02</span><div><b>Правила</b><small>Проект и игровые режимы</small></div><strong>→</strong></a>
+    <a href="donate.html"><span>03</span><div><b>Донат</b><small>Привилегии и поддержка</small></div><strong>→</strong></a>
+    <a href="profile.html"><span>04</span><div><b>Профиль</b><small>Аккаунт и статистика</small></div><strong>→</strong></a>
+  </section>
+
+  <section class="home-blocks">
+    <div class="home-panel news-panel">
+      <div class="panel-head"><span>PROJECT NEWS</span><a href="news.html">Все новости →</a></div>
+      <h2>Новости проекта</h2>
+      <p>Следи за обновлениями EPM, событиями сервера и изменениями проекта.</p>
+      <a class="panel-link" href="news.html">Перейти к новостям</a>
+    </div>
+    <a class="home-panel battle-panel" href="battlepass.html">
+      <div class="panel-head"><span>REWARDS</span><em>NEW</em></div>
+      <div class="battle-icon">✦</div>
+      <h2>Battle Pass</h2>
+      <p>Получай XP, повышай уровни и открывай обычные и премиум-награды.</p>
+      <div class="battle-bottom"><b>Премиум</b><strong>170 ₽</strong></div>
+    </a>
+  </section>
+
+  <section class="account-banner">
+    <div><span>YOUR ACCOUNT</span><h2>Войди в EPM</h2><p>Создавай темы, отвечай на сообщения, накапливай опыт и развивай профиль.</p></div>
+    <div class="account-actions"><a class="home-btn home-btn-main" href="register.html">Регистрация</a><a class="home-btn" href="login.html">Войти</a></div>
+  </section>
+</main>
+
+<footer>EPM © 2026 <span>·</span> Minecraft Community</footer>
+
+<div class="guest-modal" id="guestModal" aria-hidden="true">
+  <div class="guest-window">
+    <button id="closeGuest" class="guest-close" type="button">×</button>
+    <div class="hero-tag"><span></span> ACCOUNT REQUIRED</div>
+    <h2>Вы гость</h2>
+    <p>Чтобы продолжить, зарегистрируйтесь или войдите в свой аккаунт EPM.</p>
+    <div class="hero-actions"><a class="home-btn home-btn-main" href="register.html">Зарегистрироваться</a><a class="home-btn" href="login.html">Войти</a></div>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+<script>
+(function(){
+ const modal=document.getElementById('guestModal');
+ const play=document.getElementById('playButton');
+ const close=document.getElementById('closeGuest');
+ function logged(){return typeof getToken==='function' && !!getToken();}
+ play.addEventListener('click',()=>{if(logged()) location.href='forum.html'; else {modal.classList.add('show');modal.setAttribute('aria-hidden','false')}});
+ close.addEventListener('click',()=>{modal.classList.remove('show');modal.setAttribute('aria-hidden','true')});
+ modal.addEventListener('click',e=>{if(e.target===modal)close.click()});
+ fetch('/server-info').then(r=>r.ok?r.json():Promise.reject()).then(d=>{
+   if(d.online){document.getElementById('serverDot').classList.add('online');document.getElementById('players').textContent=(d.players??0)+'/'+(d.maxPlayers??0);document.getElementById('version').textContent=d.version||'—';}
+ }).catch(()=>{});
+})();
+</script>
+</body>
+</html>
