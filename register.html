@@ -5,29 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Регистрация — EPM</title>
 <link rel="stylesheet" href="style.css">
+<style>
+.auth-page{min-height:calc(100vh - 68px);display:flex;align-items:center;justify-content:center;padding:55px 20px}.auth-box{width:min(490px,100%);padding:34px;background:rgba(10,13,18,.94);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 70px rgba(0,0,0,.45)}.auth-head{margin-bottom:25px}.auth-head .hero-tag{margin-bottom:16px}.auth-box h1{font:600 38px/1.05 Oxanium;margin:0 0 10px}.auth-box>p{margin:0;color:#929aa6;font-size:15px}.auth-field{margin-top:17px}.auth-field label{display:block;margin-bottom:7px;color:#aeb5c0;font:600 11px Oxanium;letter-spacing:1.1px;text-transform:uppercase}.auth-field input{width:100%;height:48px;padding:0 14px;background:#080b10;border:1px solid rgba(255,255,255,.14);outline:0;border-radius:5px;color:#f0f2f5;font:500 15px Rajdhani}.auth-field input:focus{border-color:#7464ae}.auth-field input::placeholder{color:#59616d}.auth-submit{width:100%;margin-top:22px;height:48px;cursor:pointer}.auth-error{min-height:20px;margin-top:12px;color:#d98b8b;font-size:14px}.auth-footer{margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.09);text-align:center;color:#777f8b;font-size:14px}.auth-footer a{color:#a99bdd}.auth-footer a:hover{color:#d0c7ee}.auth-note{display:flex;gap:9px;margin-top:18px;padding:11px 13px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);color:#747d89;font-size:12px}
+</style>
 </head>
 <body>
-<header class="topbar">
-<a class="logo" href="index.html">EPM</a>
-<nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
-<div class="account-links"><a href="login.html">Войти</a></div>
-</header>
-<main class="auth-page">
-<section class="auth-box">
-<div class="hero-tag"><span></span> NEW EPM ACCOUNT</div>
-<h1>Создать аккаунт</h1>
-<p>Зарегистрируйся, чтобы создавать темы, отвечать игрокам и пользоваться профилем.</p>
-<form id="form">
-<div class="auth-field"><label for="nickname">Никнейм</label><input id="nickname" minlength="3" maxlength="24" required autocomplete="username" placeholder="Придумай ник"></div>
-<div class="auth-field"><label for="password">Пароль</label><input id="password" type="password" minlength="6" required autocomplete="new-password" placeholder="Минимум 6 символов"></div>
-<div class="auth-field"><label for="confirm">Повтор пароля</label><input id="confirm" type="password" minlength="6" required autocomplete="new-password" placeholder="Повтори пароль"></div>
-<div id="error" class="auth-error"></div>
-<button class="home-btn auth-submit auth-btn-main" type="submit">Зарегистрироваться</button>
-</form>
-<div class="auth-footer">Уже есть аккаунт? <a href="login.html">Войти</a></div>
-</section>
-</main>
-<script src="auth.js"></script>
-<script>setupAuth('register')</script>
+<header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a></div></header>
+<main class="auth-page"><section class="auth-box"><div class="auth-head"><div class="hero-tag"><span></span>NEW EPM ACCOUNT</div><h1>Создать аккаунт</h1><p>Зарегистрируйся, чтобы создавать темы, отвечать игрокам и пользоваться профилем.</p></div><form id="form"><div class="auth-field"><label for="nickname">Никнейм</label><input id="nickname" minlength="3" maxlength="24" required autocomplete="username" placeholder="Придумай ник"></div><div class="auth-field"><label for="password">Пароль</label><input id="password" type="password" minlength="6" required autocomplete="new-password" placeholder="Минимум 6 символов"></div><div class="auth-field"><label for="confirm">Повтор пароля</label><input id="confirm" type="password" minlength="6" required autocomplete="new-password" placeholder="Повтори пароль"></div><div id="error" class="auth-error"></div><button class="home-btn home-btn-main auth-submit" type="submit">Создать аккаунт</button></form><div class="auth-note">✓ Аккаунт нужен для форума, профиля и других функций EPM.</div><div class="auth-footer">Уже есть аккаунт? <a href="login.html">Войти</a></div></section></main>
+<script src="auth.js"></script><script>setupAuth('register')</script>
 </body>
 </html>
