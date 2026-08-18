@@ -1,1 +1,32 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход — EPM</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="register.html">Регистрация</a></div></header><main class="auth-page"><div class="auth-box"><div class="auth-mark">EPM</div><span class="hero-tag"><span></span> EPM ACCOUNT</span><h1>Вход</h1><p>Войди в свой аккаунт EPM и продолжи игру.</p><form id="form"><label for="nickname">Ник</label><input id="nickname" required autocomplete="username" placeholder="Твой ник"><label for="password">Пароль</label><input id="password" type="password" required autocomplete="current-password" placeholder="••••••••"><div id="error" class="form-error"></div><button class="auth-submit" type="submit">Войти</button></form><div class="auth-bottom">Нет аккаунта? <a href="register.html">Зарегистрироваться</a></div></div></main><script src="auth.js"></script><script>setupAuth('login')</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вход — EPM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
+<div class="account-links"><a href="register.html">Регистрация</a></div>
+</header>
+<main class="auth-page">
+<section class="auth-box">
+<div class="hero-tag"><span></span> EPM ACCOUNT</div>
+<h1>С возвращением</h1>
+<p>Войди в аккаунт EPM и продолжи с того места, где остановился.</p>
+<form id="form">
+<div class="auth-field"><label for="nickname">Никнейм</label><input id="nickname" required autocomplete="username" placeholder="Например: amanov"></div>
+<div class="auth-field"><label for="password">Пароль</label><input id="password" type="password" required autocomplete="current-password" placeholder="Введите пароль"></div>
+<div id="error" class="auth-error"></div>
+<button class="home-btn auth-submit auth-btn-main" type="submit">Войти в EPM</button>
+</form>
+<div class="auth-footer">Нет аккаунта? <a href="register.html">Создать аккаунт</a></div>
+</section>
+</main>
+<script src="auth.js"></script>
+<script>setupAuth('login')</script>
+</body>
+</html>
