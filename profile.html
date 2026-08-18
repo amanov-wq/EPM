@@ -1,1 +1,41 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Профиль — EPM</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header><main class="container profile-page"><div id="guest" class="auth-box"><span class="eyebrow">EPM ACCOUNT</span><h1>Вы гость</h1><p>Войдите или зарегистрируйтесь, чтобы открыть профиль.</p><div class="actions"><a class="btn primary" href="register.html">Зарегистрироваться</a><a class="btn" href="login.html">Войти</a></div></div><section id="user" class="profile-card" hidden><div class="profile-avatar" id="avatar">EPM</div><div class="profile-main"><span class="eyebrow">PROFILE</span><h1 id="nickname">—</h1><span class="role" id="role">Пользователь</span><p id="description">Добро пожаловать в EPM.</p><div class="profile-stats"><div><b id="topics">0</b><span>Темы</span></div><div><b id="replies">0</b><span>Ответы</span></div><div><b id="level">1</b><span>Уровень</span></div></div></div><button class="btn" id="logout">Выйти</button></section></main><footer>EPM © 2026 · Официальный проект</footer><script>const token=localStorage.getItem('epmToken');const guest=document.getElementById('guest'),user=document.getElementById('user');if(token){fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{guest.hidden=true;user.hidden=false;document.getElementById('nickname').textContent=d.user.nickname;document.getElementById('role').textContent=d.user.role;document.getElementById('description').textContent=d.user.description||'Пользователь EPM';document.getElementById('avatar').textContent=d.user.nickname.slice(0,2).toUpperCase();document.getElementById('topics').textContent=d.user.stats?.topics||0;document.getElementById('replies').textContent=d.user.stats?.replies||0;document.getElementById('level').textContent=d.user.level||1}).catch(()=>{localStorage.removeItem('epmToken');location.reload()})}document.getElementById('logout').onclick=async()=>{await fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+localStorage.getItem('epmToken')}}).catch(()=>{});localStorage.removeItem('epmToken');localStorage.removeItem('user');location.href='index.html'}</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Профиль — EPM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
+<div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div>
+</header>
+<main class="container profile-page">
+<div id="guest" class="auth-box"><span class="eyebrow">EPM ACCOUNT</span><h1>Вы гость</h1><p>Войдите или зарегистрируйтесь, чтобы открыть профиль.</p><div class="actions"><a class="btn primary" href="register.html">Зарегистрироваться</a><a class="btn" href="login.html">Войти</a></div></div>
+<section id="user" hidden>
+<div class="profile-card">
+<div class="profile-avatar-wrap"><div class="profile-avatar" id="avatar">AM</div><label class="btn avatar-btn" for="avatarInput">Сменить аватар</label><input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></div>
+<div class="profile-main"><span class="eyebrow">PROFILE</span><h1 id="nickname">amanov</h1><span class="role" id="role">Пользователь</span><p id="description">Новый участник EPM</p><div class="profile-stats"><div><b id="topics">0</b><span>Темы</span></div><div><b id="replies">0</b><span>Ответы</span></div><div><b id="level">1</b><span>Уровень</span></div></div></div>
+<div class="profile-actions"><a class="btn" href="battlepass.html">Battle Pass</a><button class="btn" id="logout">Выйти</button></div>
+</div>
+<div class="profile-message"><span class="eyebrow">MESSAGES</span><h2>Сообщения</h2><p>Здесь будут отображаться твои темы, ответы и уведомления форума.</p><a class="btn" href="forum.html">Перейти на форум</a></div>
+</section>
+</main>
+<footer>EPM © 2026 · Официальный проект</footer>
+<script src="auth.js"></script>
+<script>
+const token=localStorage.getItem('epmToken');
+const guest=document.getElementById('guest'),user=document.getElementById('user');
+const avatar=document.getElementById('avatar');
+const savedAvatar=localStorage.getItem('epmAvatar');
+function setAvatar(src,nickname){if(src){avatar.style.backgroundImage=`url("${src}")`;avatar.style.backgroundSize='cover';avatar.style.backgroundPosition='center';avatar.textContent='';}else{avatar.style.backgroundImage='';avatar.textContent=(nickname||'AM').slice(0,2).toUpperCase();}}
+if(savedAvatar)setAvatar(savedAvatar);
+if(token){fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{guest.hidden=true;user.hidden=false;const u=d.user;document.getElementById('nickname').textContent=u.nickname||'amanov';document.getElementById('role').textContent=u.role||'Пользователь';document.getElementById('description').textContent=u.description||'Новый участник EPM';setAvatar(savedAvatar,u.nickname);document.getElementById('topics').textContent=u.stats?.topics||0;document.getElementById('replies').textContent=u.stats?.replies||0;document.getElementById('level').textContent=u.level||1;}).catch(()=>{localStorage.removeItem('epmToken');location.reload()});}
+
+document.getElementById('avatarInput').onchange=e=>{const file=e.target.files[0];if(!file)return;if(file.size>2*1024*1024){alert('Аватар должен быть меньше 2 МБ');return;}const reader=new FileReader();reader.onload=()=>{localStorage.setItem('epmAvatar',reader.result);setAvatar(reader.result,document.getElementById('nickname').textContent)};reader.readAsDataURL(file)};
+document.getElementById('logout').onclick=()=>{if(typeof logout==='function')logout();else{localStorage.removeItem('epmToken');localStorage.removeItem('epmUser');location.href='index.html'}};
+</script>
+</body>
+</html>
