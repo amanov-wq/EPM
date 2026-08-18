@@ -1,1 +1,69 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Форум — EPM</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a class="active" href="forum.html">Форум</a><a href="#">Новости</a><a href="rules.html">Правила</a></nav><a class="profile" href="profile.html">Профиль</a></header><main class="container forum-wrap"><div class="forum-title"><div><span class="eyebrow">COMMUNITY FORUM</span><h1>Форум EPM</h1><p style="color:#858c99">Читать темы можно без регистрации.</p></div><button class="btn primary" id="newTopic">Новая тема</button></div><div class="categories"><button class="category active" data-category="Все">Все</button><button class="category" data-category="Новости">Новости</button><button class="category" data-category="Общение">Общение</button><button class="category" data-category="Баг-репорты">Баг-репорты</button><button class="category" data-category="Жалобы на игроков">Жалобы</button><button class="category" data-category="Команда проекта">Команда</button></div><div id="topics"><div class="empty">Загрузка тем...</div></div></main><footer>EPM © 2026</footer><div class="modal" id="modal"><div class="modal-box"><div id="guestGate"><span class="eyebrow">ДОСТУП</span><h2>Вы гость</h2><p style="color:#858c99">Чтобы создавать темы, отвечать и использовать функции аккаунта, зарегистрируйтесь или войдите.</p><div class="modal-actions"><a class="btn" href="login.html">Войти</a><a class="btn primary" href="register.html">Зарегистрироваться</a></div></div><form id="topicForm" style="display:none"><h2>Новая тема</h2><label>Заголовок</label><input id="title" required maxlength="100"><label>Раздел</label><select id="category"><option>Общение</option><option>Новости</option><option>Баг-репорты</option><option>Жалобы на игроков</option><option>Команда проекта</option></select><label>Текст</label><textarea id="content" required maxlength="5000"></textarea><div class="modal-actions"><button type="button" class="btn" id="cancel">Отмена</button><button class="btn primary">Создать</button></div></form><button type="button" class="btn" id="closeGuest" style="margin-top:15px">Закрыть</button></div></div><script src="forum.js"></script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Форум — EPM</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav>
+<a href="index.html">Главная</a>
+<a class="active" href="forum.html">Форум</a>
+<a href="news.html">Новости</a>
+<a href="rules.html">Правила</a>
+<a href="donate.html">Донат</a>
+</nav>
+<div class="account-links"><a href="profile.html">Профиль</a></div>
+</header>
+
+<main class="forum-page">
+<section class="forum-hero">
+<div>
+<div class="eyebrow">EPM COMMUNITY</div>
+<h1>Форум</h1>
+<p>Обсуждения, вопросы, новости проекта и общение игроков.</p>
+</div>
+<button class="forum-create" id="newTopic">+ Новая тема</button>
+</section>
+
+<section class="forum-categories">
+<button class="forum-category active" data-category="Все">Все темы</button>
+<button class="forum-category" data-category="Новости">Новости</button>
+<button class="forum-category" data-category="Общение">Общение</button>
+<button class="forum-category" data-category="Баг-репорты">Баг-репорты</button>
+<button class="forum-category" data-category="Жалобы на игроков">Жалобы на игроков</button>
+<button class="forum-category" data-category="Команда проекта">Команда проекта</button>
+</section>
+
+<section class="forum-list">
+<div class="forum-list-head"><span>Последние обсуждения</span><span>Ответы · Просмотры</span></div>
+<div id="topics"><div class="forum-empty">Загрузка тем...</div></div>
+</section>
+</main>
+
+<footer class="site-footer">EPM © 2026</footer>
+
+<div class="modal" id="modal">
+<div class="modal-box">
+<div id="guestGate">
+<div class="eyebrow">ДОСТУП К ФУНКЦИИ</div>
+<h2>Вы гость</h2>
+<p>Чтобы создавать темы и отвечать другим игрокам, зарегистрируйтесь или войдите в аккаунт EPM.</p>
+<div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Зарегистрироваться</a></div>
+</div>
+<form id="topicForm" style="display:none">
+<div class="eyebrow">EPM COMMUNITY</div><h2>Новая тема</h2>
+<label for="title">Заголовок</label><input id="title" required maxlength="100" placeholder="О чём хотите поговорить?">
+<label for="category">Раздел</label><select id="category"><option>Общение</option><option>Новости</option><option>Баг-репорты</option><option>Жалобы на игроков</option><option>Команда проекта</option></select>
+<label for="content">Текст</label><textarea id="content" required maxlength="5000" placeholder="Напишите сообщение..."></textarea>
+<div class="modal-actions"><button type="button" class="auth-btn secondary" id="cancel">Отмена</button><button class="auth-btn primary">Создать тему</button></div>
+</form>
+<button type="button" class="modal-close" id="closeGuest">Закрыть</button>
+</div>
+</div>
+<script src="forum.js"></script>
+</body>
+</html>
