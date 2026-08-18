@@ -1,1 +1,62 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Тема — EPM</title><link rel="stylesheet" href="style.css"></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a class="active" href="forum.html">Форум</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header><main class="container forum-wrap"><a href="forum.html" class="eyebrow">← ВЕРНУТЬСЯ НА ФОРУМ</a><div id="topic" style="margin-top:25px"><div class="empty">Загрузка...</div></div></main><footer>EPM © 2026</footer><div class="modal" id="guestModal"><div class="modal-box"><span class="eyebrow">ДОСТУП</span><h2>Вы гость</h2><p style="color:#858c99">Чтобы отвечать на темы и использовать функции аккаунта, зарегистрируйтесь или войдите.</p><div class="modal-actions"><a class="btn" href="login.html">Войти</a><a class="btn primary" href="register.html">Зарегистрироваться</a></div><button class="btn" id="closeGuest" style="margin-top:15px">Закрыть</button></div></div><script>const id=new URLSearchParams(location.search).get('id'),el=document.getElementById('topic'),guestModal=document.getElementById('guestModal');const token=()=>localStorage.getItem('epmToken');const logged=()=>Boolean(token());function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}async function load(){const r=await fetch('/api/topics/'+id);if(!r.ok){el.innerHTML='<div class="empty">Тема не найдена.</div>';return}const t=await r.json();fetch('/api/topics/'+id+'/view',{method:'POST'});el.innerHTML=`<article class="topic" style="display:block"><span class="eyebrow">${esc(t.category)}</span><h1>${esc(t.title)}</h1><p>${esc(t.author)} · ${new Date(t.createdAt).toLocaleString('ru-RU')}</p><div style="margin-top:25px;white-space:pre-wrap">${esc(t.content)}</div></article><section style="margin-top:25px"><h2>Ответы (${t.replies.length})</h2>${t.replies.map(x=>`<article class="topic" style="display:block"><b>${esc(x.author)}</b><p>${new Date(x.createdAt).toLocaleString('ru-RU')}</p><div style="margin-top:12px;white-space:pre-wrap">${esc(x.content)}</div></article>`).join('')||'<div class="empty">Ответов пока нет.</div>'}</section><div id="replyArea"></div>`;const area=document.getElementById('replyArea');if(logged()){area.innerHTML='<form id="replyForm" style="margin-top:25px"><textarea id="reply" placeholder="Написать ответ..." style="width:100%;min-height:120px;background:#11141a;border:1px solid #292e38;color:#eee;padding:15px;font:inherit" required></textarea><button class="btn primary" style="margin-top:10px">Ответить</button></form>';document.getElementById('replyForm').onsubmit=async e=>{e.preventDefault();const rr=await fetch('/api/topics/'+id+'/replies',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({content:reply.value})});if(rr.ok)load();else alert((await rr.json()).error||'Ошибка')}}else{area.innerHTML='<button class="btn primary" id="guestReply" style="margin-top:25px">Ответить</button>';document.getElementById('guestReply').onclick=()=>guestModal.classList.add('show')}}document.getElementById('closeGuest').onclick=()=>guestModal.classList.remove('show');guestModal.onclick=e=>{if(e.target===guestModal)guestModal.classList.remove('show')};load();</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тема — EPM</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav><a href="index.html">Главная</a><a class="active" href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
+<div class="account-links"><a href="profile.html">Профиль</a></div>
+</header>
+<main class="forum-wrap">
+<a href="forum.html" class="eyebrow">← НАЗАД К ФОРУМУ</a>
+<div id="topic" class="topic-view"><div class="forum-empty">Загрузка темы...</div></div>
+</main>
+<footer class="site-footer">EPM © 2026</footer>
+<div class="modal" id="guestModal"><div class="modal-box"><div class="eyebrow">ДОСТУП К ФУНКЦИИ</div><h2>Вы гость</h2><p>Чтобы отвечать на темы, зарегистрируйтесь или войдите в аккаунт EPM.</p><div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Зарегистрироваться</a></div><button class="modal-close" id="closeGuest">Закрыть</button></div></div>
+<script>
+const id=new URLSearchParams(location.search).get('id');
+const el=document.getElementById('topic');
+const guestModal=document.getElementById('guestModal');
+const token=()=>localStorage.getItem('epmToken');
+const logged=()=>Boolean(token());
+function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function load(){
+ try{
+  const r=await fetch('/api/topics/'+encodeURIComponent(id));
+  if(!r.ok){el.innerHTML='<div class="forum-empty">Тема не найдена.</div>';return;}
+  const t=await r.json();
+  fetch('/api/topics/'+encodeURIComponent(id)+'/view',{method:'POST'}).catch(()=>{});
+  el.innerHTML=`
+   <article class="topic-post">
+    <div class="eyebrow">${esc(t.category)}</div>
+    <h1>${esc(t.title)}</h1>
+    <div class="topic-post-head"><strong>${esc(t.author)}</strong><span>${new Date(t.createdAt).toLocaleString('ru-RU')}</span></div>
+    <div class="topic-post-content">${esc(t.content)}</div>
+   </article>
+   <section>
+    <div class="forum-list-head"><span>Ответы · ${t.replies.length}</span><span>Обсуждение</span></div>
+    ${t.replies.map(x=>`<article class="topic-post"><div class="topic-post-head"><strong>${esc(x.author)}</strong><span>${new Date(x.createdAt).toLocaleString('ru-RU')}</span></div><div class="topic-post-content">${esc(x.content)}</div></article>`).join('')||'<div class="forum-empty">Ответов пока нет. Будь первым.</div>'}
+   </section>
+   <div id="replyArea"></div>`;
+  const area=document.getElementById('replyArea');
+  if(logged()){
+   area.innerHTML='<form class="reply-box" id="replyForm"><textarea id="reply" placeholder="Напишите ответ..." required></textarea><button class="forum-create" style="margin-top:10px">Ответить</button></form>';
+   document.getElementById('replyForm').onsubmit=async e=>{
+    e.preventDefault();
+    const rr=await fetch('/api/topics/'+encodeURIComponent(id)+'/replies',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({content:document.getElementById('reply').value})});
+    if(rr.ok) load(); else alert((await rr.json()).error||'Ошибка');
+   };
+  }else{
+   area.innerHTML='<button class="forum-create" id="guestReply" style="margin-top:20px">Ответить</button>';
+   document.getElementById('guestReply').onclick=()=>guestModal.classList.add('show');
+  }
+ }catch{el.innerHTML='<div class="forum-empty">Не удалось загрузить тему.</div>'}
+}
+document.getElementById('closeGuest').onclick=()=>guestModal.classList.remove('show');
+guestModal.onclick=e=>{if(e.target===guestModal)guestModal.classList.remove('show')};
+load();
+</script>
+</body></html>
