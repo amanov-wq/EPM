@@ -126,9 +126,12 @@ app.get('/server-info', (req, res) => {
   res.json({ project: 'EPM', server: 'EstamonHost.ru', online: false, players: 0, maxPlayers: 0, version: '—' });
 });
 
-app.get('*', (req, res) => {
+// Express 5: wildcard routes use a named parameter.
+app.get('/{*splat}', (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'API route not found' });
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const indexPath = path.join(__dirname, 'index.html');
+  if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+  res.status(404).send('EPM: index.html пока не создан.');
 });
 
 app.listen(PORT, () => console.log(`EPM server started on port ${PORT}`));
