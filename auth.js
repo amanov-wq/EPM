@@ -5,29 +5,9 @@ function saveSession(data){if(!data?.token||!data?.user)return;localStorage.setI
 function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function logout(){const token=getToken();fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+token}}).catch(()=>{});localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);localStorage.removeItem('user');location.href='index.html'}
 function syncHeader(user){const box=document.querySelector('.account-links');if(!box)return;if(!user){box.innerHTML='<a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a>';return}box.innerHTML=`<a href="profile.html">${escapeHtml(user.nickname||'Профиль')}</a><a class="account-register" href="#" id="logoutLink">Выйти</a>`;const link=document.getElementById('logoutLink');if(link)link.onclick=e=>{e.preventDefault();logout()}}
-async function restoreSession(){
-  const token=getToken();
-  const cachedUser=getUser();
-  if(!token){syncHeader(null);window.epmUser=null;return null}
-  try{
-    const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token},cache:'no-store'});
-    if(r.ok){
-      const d=await r.json();
-      saveSession({token,user:d.user});
-      syncHeader(d.user);
-      window.epmUser=d.user;
-      return d.user;
-    }
-    if(r.status===401||r.status===403){
-      localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);localStorage.removeItem('user');
-      syncHeader(null);window.epmUser=null;return null;
-    }
-    if(cachedUser){syncHeader(cachedUser);window.epmUser=cachedUser;return cachedUser}
-    syncHeader(null);window.epmUser=null;return null;
-  }catch{
-    if(cachedUser){syncHeader(cachedUser);window.epmUser=cachedUser;return cachedUser}
-    syncHeader(null);window.epmUser=null;return null;
-  }
-}
+async function restoreSession(){const token=getToken(),cachedUser=getUser();if(!token){syncHeader(null);window.epmUser=null;return null}try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok){const d=await r.json();saveSession({token,user:d.user});syncHeader(d.user);window.epmUser=d.user;return d.user}if(r.status===401||r.status===403){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);localStorage.removeItem('user');syncHeader(null);window.epmUser=null;return null}if(cachedUser){syncHeader(cachedUser);window.epmUser=cachedUser;return cachedUser}syncHeader(null);window.epmUser=null;return null}catch{if(cachedUser){syncHeader(cachedUser);window.epmUser=cachedUser;return cachedUser}syncHeader(null);window.epmUser=null;return null}}
 async function setupAuth(mode){const form=document.getElementById('form'),error=document.getElementById('error');if(!form)return;const existing=await restoreSession();if(existing){location.href='profile.html';return}form.onsubmit=async e=>{e.preventDefault();error.textContent='';const nickname=document.getElementById('nickname').value.trim(),password=document.getElementById('password').value;if(mode==='register'&&password!==document.getElementById('confirm').value){error.textContent='Пароли не совпадают';return}try{const r=await fetch('/api/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Произошла ошибка');saveSession(d);syncHeader(d.user);location.href='profile.html'}catch(err){error.textContent=err.message||'Сервер недоступен'}}}
+function addReplyXP(){try{const u=getUser();if(!u?.id)return;const key=`epmBattlePass:${u.id}`;const s=JSON.parse(localStorage.getItem(key)||'{"xp":0,"level":1,"claimed":[],"premiumClaimed":[]}');s.xp=Math.min(2000,(Number(s.xp)||0)+20);s.level=s.xp>=2000?20:Math.min(20,Math.floor(s.xp/100)+1);localStorage.setItem(key,JSON.stringify(s));window.dispatchEvent(new Event('epm:battlepass'))}catch{}}
+(function installForumXP(){const original=window.fetch.bind(window);window.fetch=async function(input,init){const url=typeof input==='string'?input:(input?.url||'');const method=(init?.method||input?.method||'GET').toUpperCase();const response=await original(input,init);if(method==='POST'&&/\/api\/topics\/[^/]+\/repl(?:ies)?(?:$|\?)/.test(url)&&response.ok)addReplyXP();return response}})();
 document.addEventListener('DOMContentLoaded',()=>restoreSession());
+window.EPMAuth={getToken,getUser,saveSession,restoreSession,logout,syncHeader};
