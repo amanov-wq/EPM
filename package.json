@@ -5,7 +5,7 @@
   "description": "EPM website and forum",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node db-bootstrap.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
