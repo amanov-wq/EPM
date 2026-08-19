@@ -16,19 +16,13 @@
 <a href="rules.html">Правила</a>
 <a href="donate.html">Донат</a>
 </nav>
-<div class="account-links"><a href="profile.html">Профиль</a></div>
+<div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div>
 </header>
-
 <main class="forum-page">
 <section class="forum-hero">
-<div>
-<div class="eyebrow">EPM COMMUNITY</div>
-<h1>Форум</h1>
-<p>Обсуждения, вопросы, новости проекта и общение игроков.</p>
-</div>
-<button class="forum-create" id="newTopic">+ Новая тема</button>
+<div><div class="eyebrow">EPM COMMUNITY</div><h1>Форум</h1><p>Обсуждения, вопросы, новости проекта и общение игроков.</p></div>
+<button class="forum-create" id="newTopic" type="button">+ Новая тема</button>
 </section>
-
 <section class="forum-categories">
 <button class="forum-category active" data-category="Все">Все темы</button>
 <button class="forum-category" data-category="Новости">Новости</button>
@@ -37,33 +31,15 @@
 <button class="forum-category" data-category="Жалобы на игроков">Жалобы на игроков</button>
 <button class="forum-category" data-category="Команда проекта">Команда проекта</button>
 </section>
-
-<section class="forum-list">
-<div class="forum-list-head"><span>Последние обсуждения</span><span>Ответы · Просмотры</span></div>
-<div id="topics"><div class="forum-empty">Загрузка тем...</div></div>
-</section>
+<section class="forum-list"><div class="forum-list-head"><span>Последние обсуждения</span><span>Ответы · Просмотры</span></div><div id="topics"><div class="forum-empty">Загрузка тем...</div></div></section>
 </main>
-
 <footer class="site-footer">EPM © 2026</footer>
-
-<div class="modal" id="modal">
-<div class="modal-box">
-<div id="guestGate">
-<div class="eyebrow">ДОСТУП К ФУНКЦИИ</div>
-<h2>Вы гость</h2>
-<p>Чтобы создавать темы и отвечать другим игрокам, зарегистрируйтесь или войдите в аккаунт EPM.</p>
-<div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Зарегистрироваться</a></div>
-</div>
-<form id="topicForm" style="display:none">
-<div class="eyebrow">EPM COMMUNITY</div><h2>Новая тема</h2>
-<label for="title">Заголовок</label><input id="title" required maxlength="100" placeholder="О чём хотите поговорить?">
-<label for="category">Раздел</label><select id="category"><option>Общение</option><option>Новости</option><option>Баг-репорты</option><option>Жалобы на игроков</option><option>Команда проекта</option></select>
-<label for="content">Текст</label><textarea id="content" required maxlength="5000" placeholder="Напишите сообщение..."></textarea>
-<div class="modal-actions"><button type="button" class="auth-btn secondary" id="cancel">Отмена</button><button class="auth-btn primary">Создать тему</button></div>
-</form>
+<div class="modal" id="modal"><div class="modal-box">
+<div id="guestGate"><div class="eyebrow">ДОСТУП К ФУНКЦИИ</div><h2>Вы гость</h2><p>Чтобы создавать темы и отвечать другим игрокам, зарегистрируйтесь или войдите в аккаунт EPM.</p><div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Зарегистрироваться</a></div></div>
+<form id="topicForm" style="display:none"><div class="eyebrow">EPM COMMUNITY</div><h2>Новая тема</h2><label for="title">Заголовок</label><input id="title" required maxlength="100" placeholder="О чём хотите поговорить?"><label for="category">Раздел</label><select id="category"><option>Общение</option><option>Новости</option><option>Баг-репорты</option><option>Жалобы на игроков</option><option>Команда проекта</option></select><label for="content">Текст</label><textarea id="content" required maxlength="5000" placeholder="Напишите сообщение..."></textarea><div class="modal-actions"><button type="button" class="auth-btn secondary" id="cancel">Отмена</button><button class="auth-btn primary">Создать тему</button></div></form>
 <button type="button" class="modal-close" id="closeGuest">Закрыть</button>
-</div>
-</div>
+</div></div>
+<script src="auth.js"></script>
 <script src="forum.js"></script>
 </body>
 </html>
