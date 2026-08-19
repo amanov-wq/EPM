@@ -7,67 +7,22 @@
 <link rel="stylesheet" href="style.css">
 <style>
 .profile-messages{margin-top:22px;padding:24px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(12,14,20,.72);box-shadow:0 12px 35px rgba(0,0,0,.22)}
-.profile-message-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 20px}
-.profile-message-tab{padding:9px 13px;border-radius:10px;background:rgba(255,255,255,.05);color:inherit;text-decoration:none;font-size:14px}
-.profile-message-tab.active{background:rgba(255,255,255,.1)}
-.profile-message-form{display:flex;flex-direction:column;gap:12px}
-.profile-message-form textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:15px;background:rgba(0,0,0,.2);color:inherit;font:inherit;outline:none}
-.profile-message-form textarea:focus{border-color:rgba(255,255,255,.24)}
-.profile-message-submit{align-self:flex-start;border:0;cursor:pointer}
-.profile-message-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-.profile-message-item{padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);white-space:pre-wrap;word-break:break-word}
-.profile-message-meta{font-size:12px;opacity:.55;margin-bottom:7px}
-.profile-message-empty{opacity:.55;padding:10px 0}
+.profile-message-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 20px}.profile-message-tab{padding:9px 13px;border-radius:10px;background:rgba(255,255,255,.05);color:inherit;text-decoration:none;font-size:14px}.profile-message-tab.active{background:rgba(255,255,255,.1)}
+.profile-message-form{display:flex;flex-direction:column;gap:12px}.profile-message-form textarea{width:100%;min-height:120px;resize:vertical;box-sizing:border-box;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:15px;background:rgba(0,0,0,.2);color:inherit;font:inherit;outline:none}.profile-message-form textarea:focus{border-color:rgba(255,255,255,.24)}.profile-message-submit{align-self:flex-start;border:0;cursor:pointer}.profile-message-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}.profile-message-item{padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);white-space:pre-wrap;word-break:break-word}.profile-message-meta{font-size:12px;opacity:.55;margin-bottom:7px}.profile-message-empty{opacity:.55;padding:10px 0}
+.profile-about{margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07);color:#929aa6;font-size:14px}.profile-about b{color:#e9ebef}.profile-notice{margin:10px 0 0;font-size:13px;color:#929aa6}
 </style>
 </head>
 <body>
-<header class="topbar">
-<a class="logo" href="index.html">EPM</a>
-<nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
-<div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div>
-</header>
+<header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header>
 <main class="profile-page">
-<div id="guest" class="auth-box">
-<div class="auth-mark">EPM</div><span class="hero-tag"><span></span> EPM ACCOUNT</span>
-<h1>Вы гость</h1><p>Войдите или зарегистрируйтесь, чтобы открыть профиль.</p>
-<div class="hero-actions"><a class="home-btn home-btn-main" href="register.html">Зарегистрироваться</a><a class="home-btn" href="login.html">Войти</a></div>
-</div>
+<div id="guest" class="auth-box"><div class="auth-mark">EPM</div><span class="hero-tag"><span></span> EPM ACCOUNT</span><h1>Вы гость</h1><p>Войдите или зарегистрируйтесь, чтобы открыть профиль.</p><div class="hero-actions"><a class="home-btn home-btn-main" href="register.html">Зарегистрироваться</a><a class="home-btn" href="login.html">Войти</a></div></div>
 <section id="user" hidden>
-<div class="profile-card">
-<div class="profile-avatar-wrap"><div class="profile-avatar" id="avatar">AM</div><label class="avatar-change" for="avatarInput">Сменить аватар</label><input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></div>
-<div class="profile-main"><span class="hero-tag"><span></span> PROFILE</span><h1 id="nickname">amanov</h1><span class="role" id="role">Пользователь</span><p id="description">Новый участник EPM</p><div class="profile-stats"><div><b id="topics">0</b><span>Темы</span></div><div><b id="replies">0</b><span>Ответы</span></div><div><b id="level">1</b><span>Уровень</span></div></div></div>
-<div class="profile-actions"><a class="profile-action" href="battlepass.html">Battle Pass</a><button class="profile-action profile-logout" id="logout" type="button">Выйти</button></div>
-</div>
+<div class="profile-card"><div class="profile-avatar-wrap"><div class="profile-avatar" id="avatar">AM</div><label class="avatar-change" for="avatarInput">Сменить аватар</label><input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></div><div class="profile-main"><span class="hero-tag"><span></span> PROFILE</span><h1 id="nickname">amanov</h1><span class="role" id="role">Пользователь</span><p id="description">Новый участник EPM</p><div class="profile-stats"><div><b id="topics">0</b><span>Темы</span></div><div><b id="replies">0</b><span>Ответы</span></div><div><b id="level">1</b><span>Уровень</span></div></div></div><div class="profile-actions"><a class="profile-action" href="battlepass.html">Battle Pass</a><button class="profile-action profile-logout" id="logout" type="button">Выйти</button></div></div>
 <div class="profile-message"><span class="hero-tag"><span></span> MESSAGES</span><h2>Сообщения</h2><p>Здесь будут отображаться твои темы, ответы и уведомления форума.</p><a class="profile-action" href="forum.html">Перейти на форум</a></div>
-<section class="profile-messages" aria-label="Сообщения профиля">
-<span class="hero-tag"><span></span> PROFILE WALL</span>
-<div class="profile-message-tabs"><a class="profile-message-tab active" href="#messages">Сообщения профиля</a><a class="profile-message-tab" href="forum.html">Публикации</a><a class="profile-message-tab" href="#about">Информация</a></div>
-<h2 id="messages">Отправить сообщение</h2>
-<form class="profile-message-form" id="profileMessageForm">
-<textarea id="profileMessageInput" maxlength="1000" placeholder="Напишите что-нибудь..." required></textarea>
-<button class="profile-action profile-message-submit" type="submit">Отправить</button>
-</form>
-<div class="profile-message-list" id="profileMessageList"></div>
-</section>
-</section>
-</main>
-<footer>EPM © 2026 <span>·</span> Minecraft Community</footer>
-<script src="auth.js"></script>
-<script>
-(async()=>{
-const guest=document.getElementById('guest'),user=document.getElementById('user'),avatar=document.getElementById('avatar'),input=document.getElementById('avatarInput');
-const form=document.getElementById('profileMessageForm'),messageInput=document.getElementById('profileMessageInput'),messageList=document.getElementById('profileMessageList');let current=null;
-const avatarKey=id=>'epmAvatar:'+id;
-const messagesKey=id=>'epmProfileMessages:'+id;
-function setAvatar(src,nickname){if(src){avatar.style.backgroundImage=`url("${src}")`;avatar.style.backgroundSize='cover';avatar.style.backgroundPosition='center';avatar.textContent=''}else{avatar.style.backgroundImage='';avatar.textContent=(nickname||'AM').slice(0,2).toUpperCase()}}
-function showGuest(){guest.hidden=false;user.hidden=true}
-function renderMessages(){if(!current)return;const list=JSON.parse(localStorage.getItem(messagesKey(current.id))||'[]');messageList.innerHTML='';if(!list.length){messageList.innerHTML='<div class="profile-message-empty">Пока нет сообщений. Напиши первое сообщение в профиле.</div>';return}list.slice().reverse().forEach(m=>{const item=document.createElement('article');item.className='profile-message-item';const meta=document.createElement('div');meta.className='profile-message-meta';meta.textContent=current.nickname+' · '+new Date(m.createdAt).toLocaleString('ru-RU');const text=document.createElement('div');text.textContent=m.text;item.append(meta,text);messageList.appendChild(item)})}
-const token=localStorage.getItem('epmToken');if(!token){showGuest();return}
-try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(!r.ok)throw new Error();const d=await r.json(),u=d.user||{};current=u;guest.hidden=true;user.hidden=false;document.getElementById('nickname').textContent=u.nickname||'amanov';document.getElementById('role').textContent=u.role||'Пользователь';document.getElementById('description').textContent=u.description||'Новый участник EPM';document.getElementById('topics').textContent=Number(u.topics||0);document.getElementById('replies').textContent=Number(u.posts||u.replies||0);document.getElementById('level').textContent=Number(u.level||1);setAvatar(localStorage.getItem(avatarKey(u.id)),u.nickname);renderMessages()}catch{localStorage.removeItem('epmToken');localStorage.removeItem('epmUser');localStorage.removeItem('user');showGuest()}
-if(input)input.onchange=e=>{const f=e.target.files[0];if(!f||!current)return;if(f.size>2*1024*1024){alert('Аватар должен быть меньше 2 МБ');input.value='';return}const r=new FileReader();r.onload=()=>{localStorage.setItem(avatarKey(current.id),r.result);setAvatar(r.result,current.nickname)};r.readAsDataURL(f)};
-if(form)form.onsubmit=e=>{e.preventDefault();if(!current)return;const text=messageInput.value.trim();if(!text)return;const key=messagesKey(current.id),list=JSON.parse(localStorage.getItem(key)||'[]');list.push({text,createdAt:new Date().toISOString()});localStorage.setItem(key,JSON.stringify(list));messageInput.value='';renderMessages()};
-const out=document.getElementById('logout');if(out)out.onclick=()=>{if(typeof logout==='function')logout();else{localStorage.removeItem('epmToken');localStorage.removeItem('epmUser');localStorage.removeItem('user');location.href='index.html'}}
-})();
-</script>
-</body>
-</html>
+<section class="profile-messages" aria-label="Сообщения профиля"><span class="hero-tag"><span></span> PROFILE WALL</span><div class="profile-message-tabs"><a class="profile-message-tab active" href="#messages">Сообщения профиля</a><a class="profile-message-tab" href="forum.html">Публикации</a><a class="profile-message-tab" href="#about">Информация</a></div><h2 id="messages">Отправить сообщение</h2><form class="profile-message-form" id="profileMessageForm"><textarea id="profileMessageInput" maxlength="1000" placeholder="Напишите что-нибудь..." required></textarea><button class="profile-action profile-message-submit" type="submit">Отправить</button></form><div class="profile-message-list" id="profileMessageList"></div><div class="profile-about" id="about"><b>Информация</b><div id="aboutText" class="profile-notice">Профиль EPM.</div></div></section>
+</section></main><footer>EPM © 2026 <span>·</span> Minecraft Community</footer>
+<script src="auth.js"></script><script>
+(async()=>{const guest=document.getElementById('guest'),user=document.getElementById('user'),avatar=document.getElementById('avatar'),input=document.getElementById('avatarInput'),form=document.getElementById('profileMessageForm'),messageInput=document.getElementById('profileMessageInput'),messageList=document.getElementById('profileMessageList');let current=null;const avatarKey=id=>'epmAvatar:'+id,messagesKey=id=>'epmProfileMessages:'+id;function setAvatar(src,nickname){if(src){avatar.style.backgroundImage=`url("${src}")`;avatar.style.backgroundSize='cover';avatar.style.backgroundPosition='center';avatar.textContent=''}else{avatar.style.backgroundImage='';avatar.textContent=(nickname||'AM').slice(0,2).toUpperCase()}}function showGuest(){guest.hidden=false;user.hidden=true}function renderMessages(){if(!current)return;let list=[];try{list=JSON.parse(localStorage.getItem(messagesKey(current.id))||'[]')}catch{}messageList.innerHTML='';if(!list.length){messageList.innerHTML='<div class="profile-message-empty">Пока нет сообщений. Напиши первое сообщение в профиле.</div>';return}list.slice().reverse().forEach(m=>{const item=document.createElement('article');item.className='profile-message-item';const meta=document.createElement('div');meta.className='profile-message-meta';meta.textContent=current.nickname+' · '+new Date(m.createdAt).toLocaleString('ru-RU');const text=document.createElement('div');text.textContent=m.text;item.append(meta,text);messageList.appendChild(item)})}
+const token=typeof getToken==='function'?getToken():localStorage.getItem('epmToken');if(!token){showGuest();return}try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token},cache:'no-store'});if(r.ok){const d=await r.json(),u=d.user||{};current=u;guest.hidden=true;user.hidden=false;document.getElementById('nickname').textContent=u.nickname||'amanov';document.getElementById('role').textContent=u.role||'Пользователь';document.getElementById('description').textContent=u.description||'Новый участник EPM';document.getElementById('topics').textContent=Number(u.topics||0);document.getElementById('replies').textContent=Number(u.posts||u.replies||0);document.getElementById('level').textContent=Number(u.level||1);document.getElementById('aboutText').textContent=(u.description||'Новый участник EPM')+' · '+(u.role||'Пользователь');setAvatar(localStorage.getItem(avatarKey(u.id)),u.nickname);renderMessages()}else if(r.status===401||r.status===403){if(typeof logout==='function')logout();else showGuest()}else{const cached=getUser&&getUser();if(cached){current=cached;guest.hidden=true;user.hidden=false;document.getElementById('nickname').textContent=cached.nickname||'amanov';document.getElementById('role').textContent=cached.role||'Пользователь';document.getElementById('description').textContent=cached.description||'Новый участник EPM';setAvatar(localStorage.getItem(avatarKey(cached.id)),cached.nickname);renderMessages()}else showGuest()}}catch{const cached=typeof getUser==='function'?getUser():null;if(cached){current=cached;guest.hidden=true;user.hidden=false;document.getElementById('nickname').textContent=cached.nickname||'amanov';document.getElementById('role').textContent=cached.role||'Пользователь';document.getElementById('description').textContent=cached.description||'Новый участник EPM';setAvatar(localStorage.getItem(avatarKey(cached.id)),cached.nickname);renderMessages()}else showGuest()}
+if(input)input.onchange=e=>{const f=e.target.files[0];if(!f||!current)return;if(f.size>2*1024*1024){alert('Аватар должен быть меньше 2 МБ');input.value='';return}const r=new FileReader();r.onload=()=>{localStorage.setItem(avatarKey(current.id),r.result);setAvatar(r.result,current.nickname)};r.readAsDataURL(f)};if(form)form.onsubmit=e=>{e.preventDefault();if(!current)return;const text=messageInput.value.trim();if(!text)return;let list=[];try{list=JSON.parse(localStorage.getItem(messagesKey(current.id))||'[]')}catch{}list.push({text,createdAt:new Date().toISOString()});localStorage.setItem(messagesKey(current.id),JSON.stringify(list));messageInput.value='';renderMessages()};const out=document.getElementById('logout');if(out)out.onclick=()=>typeof logout==='function'?logout():location.assign('index.html')})();
+</script></body></html>
