@@ -8,7 +8,7 @@
 <header class="topbar">
 <a class="logo" href="index.html">EPM</a>
 <nav><a href="index.html">Главная</a><a class="active" href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav>
-<div class="account-links"><a href="profile.html">Профиль</a></div>
+<div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div>
 </header>
 <main class="forum-wrap">
 <a href="forum.html" class="eyebrow">← НАЗАД К ФОРУМУ</a>
@@ -16,43 +16,40 @@
 </main>
 <footer class="site-footer">EPM © 2026</footer>
 <div class="modal" id="guestModal"><div class="modal-box"><div class="eyebrow">ДОСТУП К ФУНКЦИИ</div><h2>Вы гость</h2><p>Чтобы отвечать на темы, зарегистрируйтесь или войдите в аккаунт EPM.</p><div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Зарегистрироваться</a></div><button class="modal-close" id="closeGuest">Закрыть</button></div></div>
+<script src="auth.js"></script>
 <script>
 const id=new URLSearchParams(location.search).get('id');
 const el=document.getElementById('topic');
 const guestModal=document.getElementById('guestModal');
-const token=()=>localStorage.getItem('epmToken');
-const logged=()=>Boolean(token());
-function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+const token=()=>getToken();
+const staff=u=>['Создатель','Модератор','Ст.Модератор'].includes(u?.role);
+function esc(s=''){return escapeHtml(s)}
+function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleString('ru-RU')}
+function showGuest(){guestModal.classList.add('show')}
+async function action(url,method='POST'){
+ const r=await fetch(url,{method,headers:{Authorization:'Bearer '+token()}});
+ const d=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(d.error||'Ошибка операции');
+ return d;
+}
 async function load(){
+ if(!id){el.innerHTML='<div class="forum-empty">Тема не указана.</div>';return}
  try{
-  const r=await fetch('/api/topics/'+encodeURIComponent(id));
-  if(!r.ok){el.innerHTML='<div class="forum-empty">Тема не найдена.</div>';return;}
+  const r=await fetch('/api/topics/'+encodeURIComponent(id),{cache:'no-store'});
+  if(!r.ok){el.innerHTML='<div class="forum-empty">Тема не найдена.</div>';return}
   const t=await r.json();
   fetch('/api/topics/'+encodeURIComponent(id)+'/view',{method:'POST'}).catch(()=>{});
-  el.innerHTML=`
-   <article class="topic-post">
-    <div class="eyebrow">${esc(t.category)}</div>
-    <h1>${esc(t.title)}</h1>
-    <div class="topic-post-head"><strong>${esc(t.author)}</strong><span>${new Date(t.createdAt).toLocaleString('ru-RU')}</span></div>
-    <div class="topic-post-content">${esc(t.content)}</div>
-   </article>
-   <section>
-    <div class="forum-list-head"><span>Ответы · ${t.replies.length}</span><span>Обсуждение</span></div>
-    ${t.replies.map(x=>`<article class="topic-post"><div class="topic-post-head"><strong>${esc(x.author)}</strong><span>${new Date(x.createdAt).toLocaleString('ru-RU')}</span></div><div class="topic-post-content">${esc(x.content)}</div></article>`).join('')||'<div class="forum-empty">Ответов пока нет. Будь первым.</div>'}
-   </section>
-   <div id="replyArea"></div>`;
-  const area=document.getElementById('replyArea');
-  if(logged()){
-   area.innerHTML='<form class="reply-box" id="replyForm"><textarea id="reply" placeholder="Напишите ответ..." required></textarea><button class="forum-create" style="margin-top:10px">Ответить</button></form>';
-   document.getElementById('replyForm').onsubmit=async e=>{
-    e.preventDefault();
-    const rr=await fetch('/api/topics/'+encodeURIComponent(id)+'/replies',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({content:document.getElementById('reply').value})});
-    if(rr.ok) load(); else alert((await rr.json()).error||'Ошибка');
-   };
-  }else{
-   area.innerHTML='<button class="forum-create" id="guestReply" style="margin-top:20px">Ответить</button>';
-   document.getElementById('guestReply').onclick=()=>guestModal.classList.add('show');
+  const user=await restoreSession();
+  const controls=staff(user)?`<div class="topic-controls"><button id="pinTopic" class="auth-btn secondary">${t.pinned?'Открепить':'Закрепить'}</button><button id="closeTopic" class="auth-btn secondary">${t.closed?'Открыть':'Закрыть'}</button><button id="deleteTopic" class="auth-btn danger">Удалить</button></div>`:'';
+  const replyArea=t.closed?'<div class="forum-empty">Тема закрыта администрацией.</div>':(user?'<form class="reply-box" id="replyForm"><textarea id="reply" maxlength="5000" placeholder="Напишите ответ..." required></textarea><button class="forum-create" style="margin-top:10px">Ответить</button></form>':'<button class="forum-create" id="guestReply" style="margin-top:20px">Ответить</button>');
+  el.innerHTML=`<article class="topic-post"><div class="eyebrow">${esc(t.category||'Обсуждение')}</div><h1>${t.pinned?'📌 ':''}${esc(t.title)}</h1><div class="topic-post-head"><strong>${esc(t.author||'Пользователь')}</strong><span>${date(t.createdAt)} · ${Number(t.views||0)} просмотров</span></div><div class="topic-post-content">${esc(t.content)}</div>${controls}</article><section><div class="forum-list-head"><span>Ответы · ${t.replies.length}</span><span>${t.closed?'Закрыто':'Открыто'}</span></div>${t.replies.map(x=>`<article class="topic-post"><div class="topic-post-head"><strong>${esc(x.author||'Пользователь')}</strong><span>${date(x.createdAt)}</span></div><div class="topic-post-content">${esc(x.content)}</div></article>`).join('')||'<div class="forum-empty">Ответов пока нет. Будь первым.</div>'}</section><div id="replyArea">${replyArea}</div>`;
+  if(user&&staff(user)){
+   document.getElementById('pinTopic').onclick=async()=>{try{await action('/api/topics/'+id+'/pin');await load()}catch(e){alert(e.message)}};
+   document.getElementById('closeTopic').onclick=async()=>{try{await action('/api/topics/'+id+'/close');await load()}catch(e){alert(e.message)}};
+   document.getElementById('deleteTopic').onclick=async()=>{if(!confirm('Удалить тему и все её ответы?'))return;try{await action('/api/topics/'+id,'DELETE');location.href='forum.html'}catch(e){alert(e.message)}};
   }
+  if(user&&!t.closed){document.getElementById('replyForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;try{const rr=await fetch('/api/topics/'+id+'/replies',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({content:document.getElementById('reply').value.trim()})});const d=await rr.json().catch(()=>({}));if(!rr.ok)throw new Error(d.error||'Ошибка');await load()}catch(e){alert(e.message)}finally{b.disabled=false}}}
+  if(!user&&!t.closed)document.getElementById('guestReply').onclick=showGuest;
  }catch{el.innerHTML='<div class="forum-empty">Не удалось загрузить тему.</div>'}
 }
 document.getElementById('closeGuest').onclick=()=>guestModal.classList.remove('show');
