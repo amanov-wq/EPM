@@ -63,4 +63,32 @@ async function closeDatabase() {
   if (pool) await pool.end();
 }
 
-module.exports = { pool, initDatabase, closeDatabase };
+async function replaceFromJson(name, rows) {
+  if (!pool) return;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (name === 'users') {
+      for (const u of rows) await client.query(`INSERT INTO users (id,nickname,password,role,description,posts,topics,level,battle_pass,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,battle_pass=EXCLUDED.battle_pass`, [u.id,u.nickname,u.password,u.role||'Пользователь',u.description||'',u.posts||0,u.topics||0,u.level||1,u.battlePass||0,u.createdAt||new Date()]);
+      await client.query(`SELECT setval(pg_get_serial_sequence('users','id'), COALESCE((SELECT MAX(id) FROM users),1), true)`);
+    }
+    if (name === 'topics') {
+      for (const t of rows) await client.query(`INSERT INTO topics (id,title,content,author,author_id,category,pinned,closed,views,replies_count,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,content=EXCLUDED.content,author=EXCLUDED.author,author_id=EXCLUDED.author_id,category=EXCLUDED.category,pinned=EXCLUDED.pinned,closed=EXCLUDED.closed,views=EXCLUDED.views,replies_count=EXCLUDED.replies_count,updated_at=EXCLUDED.updated_at`, [t.id,t.title,t.content,t.author,t.authorId,t.category||'Общение',!!t.pinned,!!t.closed,t.views||0,t.repliesCount||0,t.createdAt||new Date(),t.updatedAt||t.createdAt||new Date()]);
+      await client.query(`SELECT setval(pg_get_serial_sequence('topics','id'), COALESCE((SELECT MAX(id) FROM topics),1), true)`);
+    }
+    if (name === 'replies') for (const r of rows) await client.query(`INSERT INTO replies (id,topic_id,content,author,author_id,created_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO UPDATE SET content=EXCLUDED.content`, [r.id,r.topicId,r.content,r.author,r.authorId,r.createdAt||new Date()]);
+    if (name === 'battlepass') for (const b of rows) await client.query(`INSERT INTO battlepass (user_id,xp,claimed,premium_claimed,premium) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (user_id) DO UPDATE SET xp=EXCLUDED.xp,claimed=EXCLUDED.claimed,premium_claimed=EXCLUDED.premium_claimed,premium=EXCLUDED.premium`, [b.userId,b.xp||0,b.claimed||[],b.premiumClaimed||[],!!b.premium]);
+    await client.query('COMMIT');
+  } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
+}
+
+async function loadToJson(name) {
+  if (!pool) return null;
+  if (name === 'users') { const {rows}=await pool.query('SELECT id,nickname,password,role,description,posts,topics,level,battle_pass AS "battlePass",created_at AS "createdAt" FROM users ORDER BY id'); return rows; }
+  if (name === 'topics') { const {rows}=await pool.query('SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics ORDER BY id'); return rows; }
+  if (name === 'replies') { const {rows}=await pool.query('SELECT id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt" FROM replies ORDER BY id'); return rows; }
+  if (name === 'battlepass') { const {rows}=await pool.query('SELECT user_id AS "userId",xp,claimed,premium_claimed AS "premiumClaimed",premium FROM battlepass ORDER BY user_id'); return rows; }
+  return null;
+}
+
+module.exports = { pool, initDatabase, closeDatabase, replaceFromJson, loadToJson };
