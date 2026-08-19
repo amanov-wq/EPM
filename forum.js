@@ -6,11 +6,10 @@ let current='Все';
 let topics=[];
 let currentUser=null;
 const token=()=>localStorage.getItem('epmToken')||'';
-const isLoggedIn=()=>Boolean(token()&&currentUser);
 
 async function refreshAuth(){
-  if(typeof restoreSession==='function') currentUser=await restoreSession();
-  else currentUser=token()?getUser():null;
+  try{ currentUser=typeof restoreSession==='function'?await restoreSession():(token()&&typeof getUser==='function'?getUser():null); }
+  catch{ currentUser=null; }
   return currentUser;
 }
 
@@ -26,7 +25,8 @@ async function load(){
   try{
     const r=await fetch('/api/topics',{cache:'no-store'});
     if(!r.ok) throw new Error();
-    topics=await r.json();
+    const data=await r.json();
+    topics=Array.isArray(data)?data:[];
     render();
   }catch{
     topicsEl.innerHTML='<div class="forum-empty">Не удалось загрузить форум.<br>Проверьте, запущен ли сервер.</div>';
@@ -35,11 +35,8 @@ async function load(){
 
 function render(){
   const list=current==='Все'?topics:topics.filter(t=>t.category===current);
-  if(!list.length){
-    topicsEl.innerHTML='<div class="forum-empty">В этом разделе пока нет тем.<br>Создай первую тему.</div>';
-    return;
-  }
-  topicsEl.innerHTML=list.map(t=>`<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div><h3>${t.pinned?'📌 ':''}${esc(t.title)}</h3><p>${esc(t.category)} · ${esc(t.author)} · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${t.repliesCount||0}</b> ответов</div><div><b>${t.views||0}</b> просмотров</div></div></a>`).join('');
+  if(!list.length){topicsEl.innerHTML='<div class="forum-empty">В этом разделе пока нет тем.<br>Создай первую тему.</div>';return;}
+  topicsEl.innerHTML=list.map(t=>`<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div><h3>${t.pinned?'📌 ':''}${esc(t.title)}</h3><p>${esc(t.category||'Обсуждение')} · ${esc(t.author||'Пользователь')} · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${Number(t.repliesCount||0)}</b> ответов</div><div><b>${Number(t.views||0)}</b> просмотров</div></div></a>`).join('');
 }
 
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
@@ -54,18 +51,22 @@ document.querySelectorAll('.forum-category').forEach(b=>b.onclick=()=>{document.
 form.onsubmit=async e=>{
   e.preventDefault();
   await refreshAuth();
-  if(!currentUser){openAction();return;}
+  if(!currentUser){await openAction();return;}
   const titleValue=document.getElementById('title').value.trim();
   const categoryValue=document.getElementById('category').value;
   const contentValue=document.getElementById('content').value.trim();
-  if(!titleValue||!contentValue)return;
+  if(titleValue.length<3||contentValue.length<2)return;
+  const button=form.querySelector('button[type="submit"]');
+  if(button)button.disabled=true;
   try{
     const r=await fetch('/api/topics',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({title:titleValue,category:categoryValue,content:contentValue})});
     const d=await r.json().catch(()=>({}));
     if(r.ok){form.reset();modal.classList.remove('show');await load();}
-    else if(r.status===401||r.status===403){currentUser=null;await refreshAuth();openAction()}
+    else if(r.status===401||r.status===403){currentUser=null;await openAction();}
     else alert(d.error||'Ошибка создания темы');
-  }catch{alert('Не удалось соединиться с сервером.')}
+  }catch{alert('Не удалось соединиться с сервером.');}
+  finally{if(button)button.disabled=false;}
 };
 
 (async()=>{await refreshAuth();await load()})();
+setInterval(load,30000);
