@@ -8,10 +8,11 @@ async function initDatabase() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY, nickname TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'Пользователь', description TEXT DEFAULT '', posts INTEGER NOT NULL DEFAULT 0,
-      topics INTEGER NOT NULL DEFAULT 0, level INTEGER NOT NULL DEFAULT 1, battle_pass INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      role TEXT NOT NULL DEFAULT 'Пользователь', description TEXT DEFAULT '', avatar TEXT DEFAULT '',
+      posts INTEGER NOT NULL DEFAULT 0, topics INTEGER NOT NULL DEFAULT 0, level INTEGER NOT NULL DEFAULT 1,
+      battle_pass INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '';
     CREATE TABLE IF NOT EXISTS topics (
       id SERIAL PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL, author TEXT NOT NULL, author_id INTEGER NOT NULL,
       category TEXT NOT NULL DEFAULT 'Общение', pinned BOOLEAN NOT NULL DEFAULT FALSE, closed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -45,7 +46,7 @@ async function replaceFromJson(name, rows) {
     const ids = rows.map(x => Number(name === 'battlepass' ? x.userId : x.id)).filter(Number.isFinite);
     if (name === 'users') {
       if (ids.length) await client.query(`DELETE FROM users WHERE id <> ALL($1::int[])`, [ids]); else await client.query('DELETE FROM users');
-      for (const u of rows) await client.query(`INSERT INTO users (id,nickname,password,role,description,posts,topics,level,battle_pass,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,battle_pass=EXCLUDED.battle_pass`, [u.id,u.nickname,u.password,u.role||'Пользователь',u.description||'',u.posts||0,u.topics||0,u.level||1,u.battlePass||0,u.createdAt||new Date()]);
+      for (const u of rows) await client.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,battle_pass,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,battle_pass=EXCLUDED.battle_pass`, [u.id,u.nickname,u.password,u.role||'Пользователь',u.description||'',u.avatar||'',u.posts||0,u.topics||0,u.level||1,u.battlePass||0,u.createdAt||new Date()]);
       await client.query(`SELECT setval(pg_get_serial_sequence('users','id'), COALESCE((SELECT MAX(id) FROM users),1), true)`);
     } else if (name === 'topics') {
       if (ids.length) await client.query(`DELETE FROM topics WHERE id <> ALL($1::int[])`, [ids]); else await client.query('DELETE FROM topics');
@@ -65,7 +66,7 @@ async function replaceFromJson(name, rows) {
 
 async function loadToJson(name) {
   if (!pool) return null;
-  if (name === 'users') { const {rows}=await pool.query('SELECT id,nickname,password,role,description,posts,topics,level,battle_pass AS "battlePass",created_at AS "createdAt" FROM users ORDER BY id'); return rows; }
+  if (name === 'users') { const {rows}=await pool.query('SELECT id,nickname,password,role,description,avatar,posts,topics,level,battle_pass AS "battlePass",created_at AS "createdAt" FROM users ORDER BY id'); return rows; }
   if (name === 'topics') { const {rows}=await pool.query('SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics ORDER BY id'); return rows; }
   if (name === 'replies') { const {rows}=await pool.query('SELECT id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt" FROM replies ORDER BY id'); return rows; }
   if (name === 'battlepass') { const {rows}=await pool.query('SELECT user_id AS "userId",xp,claimed,premium_claimed AS "premiumClaimed",premium FROM battlepass ORDER BY user_id'); return rows; }
