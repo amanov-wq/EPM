@@ -1,0 +1,18 @@
+/* EPM unified visual system — shared by all pages. Rules content is intentionally untouched. */
+:root{--epm-bg:#07090d;--epm-panel:rgba(15,19,27,.94);--epm-panel-2:rgba(10,13,19,.97);--epm-line:rgba(255,255,255,.10);--epm-muted:#87909d;--epm-text:#eef1f6;--epm-purple:#806bc0;--epm-purple-2:#6654a5;--epm-glow:rgba(128,107,192,.28)}
+body{background:var(--epm-bg);color:var(--epm-text)}
+.topbar{background:rgba(7,9,13,.92);border-bottom:1px solid var(--epm-line);box-shadow:0 8px 35px rgba(0,0,0,.18)}
+.logo{color:#fff}.topbar nav a,.account-links a{border:1px solid transparent}.topbar nav a:hover,.topbar nav a.active,.account-links a:hover{border-color:rgba(128,107,192,.25);background:rgba(128,107,192,.12);color:#f4f0ff}
+.hero-server,.quick-links a,.home-panel,.forum-hero,.forum-categories,.forum-list,.profile-card,.profile-message,.profile-messages,.auth-box,.rules-container,.news-feature,.news-card,.bp-level,.reward,.premium-pass,.premium-reward,.donate-card{border-color:var(--epm-line);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.home-btn,.auth-btn,.profile-action,.forum-create,.donate-buy,.premium-btn,.btn{border-radius:9px;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.home-btn:hover,.auth-btn:hover,.profile-action:hover,.forum-create:hover,.donate-buy:hover,.premium-btn:hover,.btn:hover{transform:translateY(-2px);border-color:rgba(151,130,224,.65);box-shadow:0 10px 28px rgba(73,55,125,.20)}
+.home-btn-main,.auth-btn.primary,.forum-create,.premium-btn,.profile-message-submit{background:linear-gradient(135deg,var(--epm-purple-2),var(--epm-purple));border-color:#9580da}
+.panel-link,.news-feature a,.profile-action,.profile-message-tab,.auth-footer a{transition:color .18s ease}
+.panel-link:hover,.news-feature a:hover,.profile-action:hover,.profile-message-tab:hover,.auth-footer a:hover{color:#d9d0ff}
+.news-page,.donate-page,.bp-page{position:relative}.news-hero,.donate-hero,.bp-head{position:relative}
+.news-card,.donate-card,.reward,.premium-reward{border-radius:15px}
+.auth-box{border-radius:18px!important}.auth-field input,.modal-box input,.modal-box select,.modal-box textarea,.profile-message-form textarea{border-radius:9px!important}
+.auth-field input:focus,.modal-box input:focus,.modal-box select:focus,.modal-box textarea:focus,.profile-message-form textarea:focus{border-color:#806bc0;box-shadow:0 0 0 3px rgba(128,107,192,.12)}
+.forum-topic{transition:background .18s ease,padding-left .18s ease}.forum-topic:hover{padding-left:24px;background:rgba(128,107,192,.075)}
+footer,.site-footer{background:rgba(5,7,10,.35)}
+@media(max-width:700px){.topbar{backdrop-filter:blur(14px)}.auth-page,.profile-page,.forum-page,.news-page,.donate-page,.bp-page{width:calc(100% - 24px);padding-left:0;padding-right:0}.auth-page{min-height:calc(100vh - 90px);padding-top:30px}.auth-box{padding:24px}.forum-hero,.premium-pass{border-radius:14px}.profile-card{padding:22px}.news-feature{border-radius:14px}.donate-card,.reward,.premium-reward{border-radius:12px}}
