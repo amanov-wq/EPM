@@ -42,6 +42,28 @@ async function syncStartup() {
 
   await initDatabase();
 
+  // If the database has no Создатель yet, promote the oldest existing
+  // account once so the project is not left without an administrator.
+  const creator = await pool.query(
+    `SELECT id FROM users WHERE role = 'Создатель' LIMIT 1`
+  );
+
+  if (creator.rows.length === 0) {
+    const firstUser = await pool.query(
+      `SELECT id, nickname FROM users ORDER BY id ASC LIMIT 1`
+    );
+
+    if (firstUser.rows[0]) {
+      await pool.query(
+        `UPDATE users SET role = 'Создатель' WHERE id = $1`,
+        [firstUser.rows[0].id]
+      );
+      console.log(`EPM: Создатель назначен аккаунту ${firstUser.rows[0].nickname}.`);
+    } else {
+      console.log('EPM: пользователей пока нет; Создатель будет назначен первому аккаунту.');
+    }
+  }
+
   // PostgreSQL is the source of truth when it contains data.
   // Legacy JSON files are imported only for an empty database, then kept as
   // a compatibility mirror. We intentionally do not watch/write them at
