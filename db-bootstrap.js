@@ -10,16 +10,11 @@ const files = {
   battlepass: path.join(DATA_DIR, 'battlepass.json')
 };
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function readJson(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { return []; }
 }
 
 function writeJson(file, rows) {
@@ -42,32 +37,12 @@ async function syncStartup() {
 
   await initDatabase();
 
-  // If the database has no Создатель yet, promote the oldest existing
-  // account once so the project is not left without an administrator.
-  const creator = await pool.query(
-    `SELECT id FROM users WHERE role = 'Создатель' LIMIT 1`
-  );
+  // Создатель — максимальная роль EPM. Никакого автоматического
+  // назначения Создателя здесь нет: новые аккаунты остаются Пользователями.
+  // Повышение выполняется только через серверную систему управления ролями.
 
-  if (creator.rows.length === 0) {
-    const firstUser = await pool.query(
-      `SELECT id, nickname FROM users ORDER BY id ASC LIMIT 1`
-    );
-
-    if (firstUser.rows[0]) {
-      await pool.query(
-        `UPDATE users SET role = 'Создатель' WHERE id = $1`,
-        [firstUser.rows[0].id]
-      );
-      console.log(`EPM: Создатель назначен аккаунту ${firstUser.rows[0].nickname}.`);
-    } else {
-      console.log('EPM: пользователей пока нет; Создатель будет назначен первому аккаунту.');
-    }
-  }
-
-  // PostgreSQL is the source of truth when it contains data.
-  // Legacy JSON files are imported only for an empty database, then kept as
-  // a compatibility mirror. We intentionally do not watch/write them at
-  // runtime because doing so could overwrite newer database data.
+  // PostgreSQL — источник истины. Legacy JSON используется только для
+  // первоначального импорта пустых таблиц и как совместимое зеркало.
   for (const name of Object.keys(files)) {
     const fromDb = await loadToJson(name);
     const local = readJson(files[name]);
