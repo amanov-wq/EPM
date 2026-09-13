@@ -317,7 +317,10 @@ app.patch('/api/profile', auth, async (req, res) => {
 });
 
 app.get('/api/admin/users', auth, async (req, res) => {
-  // TEMPORARILY OPEN FOR TESTING: any authenticated user can open the admin panel.
+  if (!isCreator(req.user)) {
+    return res.status(403).json({ error: 'Доступ только для Создателя' });
+  }
+
   try {
     const users = pool
       ? (await pool.query(
@@ -342,7 +345,10 @@ app.get('/api/admin/users', auth, async (req, res) => {
 });
 
 app.patch('/api/admin/users/:id/role', auth, async (req, res) => {
-  // TEMPORARILY OPEN FOR TESTING: any authenticated user can change roles.
+  if (!isCreator(req.user)) {
+    return res.status(403).json({ error: 'Доступ только для Создателя' });
+  }
+
   const role = String(req.body.role || '');
   if (!ROLES.includes(role)) {
     return res.status(400).json({ error: 'Неизвестная роль' });
