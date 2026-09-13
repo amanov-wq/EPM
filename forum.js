@@ -2,12 +2,23 @@ const topicsEl=document.getElementById('topics');
 const modal=document.getElementById('modal');
 const form=document.getElementById('topicForm');
 const guestGate=document.getElementById('guestGate');
-let current='Все',topics=[],currentUser=null;
+let current='Все',topics=[],currentUser=null,profileCache=new Map();
 const token=()=>typeof getToken==='function'?getToken():localStorage.getItem('epmToken')||'';
 
 async function refreshAuth(){
   try{currentUser=typeof restoreSession==='function'?await restoreSession():(token()&&typeof getUser==='function'?getUser():null)}catch{currentUser=null}
   return currentUser;
+}
+
+async function getProfile(id){
+  if(!id)return null;
+  if(profileCache.has(String(id)))return profileCache.get(String(id));
+  try{const r=await fetch('/api/profile/'+encodeURIComponent(id),{cache:'no-store'});if(!r.ok)return null;const d=await r.json();const user=d.user||null;profileCache.set(String(id),user);return user}catch{return null}
+}
+
+async function enrichTopics(){
+  const ids=[...new Set(topics.map(t=>t.authorId).filter(Boolean).map(String))];
+  await Promise.all(ids.map(getProfile));
 }
 
 async function openAction(){
@@ -24,12 +35,27 @@ function updateStats(){
   document.getElementById('viewCount').textContent=topics.reduce((n,t)=>n+Number(t.views||0),0);
 }
 
+function userData(topic){
+  const user=topic.authorId?profileCache.get(String(topic.authorId)):null;
+  return {
+    nickname:user?.nickname||topic.author||'Пользователь',
+    role:user?.role||'Пользователь',
+    avatar:user?.avatar||''
+  };
+}
+
+function avatar(user){
+  if(user.avatar)return `<img src="${esc(user.avatar)}" alt="" loading="lazy">`;
+  return `<span>${esc(user.nickname.slice(0,1).toUpperCase())}</span>`;
+}
+
 async function load(){
   try{
     const r=await fetch('/api/topics',{cache:'no-store'});
     if(!r.ok)throw new Error();
     const data=await r.json();
     topics=Array.isArray(data)?data:[];
+    await enrichTopics();
     updateStats();
     render();
   }catch{
@@ -42,7 +68,10 @@ function render(){
   list=[...list].sort((a,b)=>Number(Boolean(b.pinned))-Number(Boolean(a.pinned))||new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0));
   document.getElementById('listTitle').textContent=current==='Все'?'Последние обсуждения':current;
   if(!list.length){topicsEl.innerHTML='<div class="forum-empty"><strong>В этом разделе пока нет тем</strong><span>Создай первую тему и начни обсуждение.</span></div>';return}
-  topicsEl.innerHTML=list.map(t=>`<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div class="forum-topic-main"><div class="forum-topic-badges">${t.pinned?'<span class="topic-badge pinned">📌 Закреплено</span>':''}${t.closed?'<span class="topic-badge closed">Закрыто</span>':''}<span class="topic-badge">${esc(t.category||'Обсуждение')}</span></div><h3>${esc(t.title)}</h3><p>${esc(t.author||'Пользователь')} · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${Number(t.repliesCount||0)}</b>ответов</div><div><b>${Number(t.views||0)}</b>просмотров</div></div></a>`).join('');
+  topicsEl.innerHTML=list.map(t=>{
+    const u=userData(t);
+    return `<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div class="forum-topic-avatar">${avatar(u)}</div><div class="forum-topic-main"><div class="forum-topic-badges">${t.pinned?'<span class="topic-badge pinned">📌 Закреплено</span>':''}${t.closed?'<span class="topic-badge closed">Закрыто</span>':''}<span class="topic-badge">${esc(t.category||'Обсуждение')}</span></div><h3>${esc(t.title)}</h3><p>${esc(u.nickname)} · <b>${esc(u.role)}</b> · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${Number(t.repliesCount||0)}</b>ответов</div><div><b>${Number(t.views||0)}</b>просмотров</div></div></a>`;
+  }).join('');
 }
 
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
