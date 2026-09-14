@@ -27,6 +27,27 @@ function ensureJsonFiles() {
   }
 }
 
+async function repairAuthorLinks() {
+  // Старые темы и ответы могли быть созданы до появления стабильной
+  // привязки authorId. На старте восстанавливаем связь по нику автора.
+  // Это не меняет роли или аватары пользователей.
+  await pool.query(`
+    UPDATE topics t
+    SET author_id = u.id
+    FROM users u
+    WHERE LOWER(TRIM(COALESCE(t.author, ''))) = LOWER(TRIM(u.nickname))
+      AND t.author_id IS DISTINCT FROM u.id
+  `);
+
+  await pool.query(`
+    UPDATE replies r
+    SET author_id = u.id
+    FROM users u
+    WHERE LOWER(TRIM(COALESCE(r.author, ''))) = LOWER(TRIM(u.nickname))
+      AND r.author_id IS DISTINCT FROM u.id
+  `);
+}
+
 async function syncStartup() {
   ensureJsonFiles();
 
@@ -53,6 +74,9 @@ async function syncStartup() {
       await replaceFromJson(name, local);
     }
   }
+
+  // После синхронизации восстанавливаем authorId у старых тем и ответов.
+  await repairAuthorLinks();
 
   console.log('EPM: PostgreSQL persistence enabled.');
 }
