@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { pool } = require('./database');
+const { pool, initDatabase } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,7 +42,7 @@ function hash(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-const AUTH_SECRET = process.env.EPM_AUTH_SECRET || 'epm-local-secret-change-me';
+const AUTH_SECRET = process.env.EPM_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
 const TOKEN_TTL = 1000 * 60 * 60 * 24 * 30;
 
 function makeToken(userId) {
@@ -55,11 +55,13 @@ function makeToken(userId) {
 function verifyToken(token) {
   try {
     const [id, exp, signature] = String(token || '').split('.');
-    if (!id || !exp || !signature || Number(exp) < Date.now()) return null;
+    if (!/^\d+$/.test(id) || !/^\d+$/.test(exp) || !/^[a-f0-9]{64}$/i.test(signature)) return null;
+    if (Number(exp) < Date.now()) return null;
     const expected = crypto.createHmac('sha256', AUTH_SECRET).update(`${id}.${exp}`).digest('hex');
     if (signature.length !== expected.length) return null;
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
-    return Number(id);
+    const userId = Number(id);
+    return Number.isSafeInteger(userId) && userId > 0 ? userId : null;
   } catch { return null; }
 }
 
@@ -79,7 +81,7 @@ async function getUser(id) {
   if (pool) {
     const result = await pool.query(
       `SELECT id, nickname, password, role, description, avatar, posts, topics,
-              level, battle_pass AS "battlePass", created_at AS "createdAt"
+              level, battle_pass AS "battlePass", blocked, created_at AS "createdAt"
        FROM users WHERE id = $1`, [id]
     );
     if (result.rows[0]) return result.rows[0];
@@ -91,16 +93,17 @@ async function saveUser(user) {
   if (pool) {
     await pool.query(
       `INSERT INTO users
-       (id, nickname, password, role, description, avatar, posts, topics, level, battle_pass, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       (id, nickname, password, role, description, avatar, posts, topics, level, battle_pass, blocked, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        ON CONFLICT (id) DO UPDATE SET
          nickname = EXCLUDED.nickname, password = EXCLUDED.password,
          role = EXCLUDED.role, description = EXCLUDED.description,
          avatar = EXCLUDED.avatar, posts = EXCLUDED.posts, topics = EXCLUDED.topics,
-         level = EXCLUDED.level, battle_pass = EXCLUDED.battle_pass`,
+         level = EXCLUDED.level, battle_pass = EXCLUDED.battle_pass,
+         blocked = EXCLUDED.blocked`,
       [user.id,user.nickname,user.password,user.role || 'Пользователь',user.description || '',
        user.avatar || '',user.posts || 0,user.topics || 0,user.level || 1,
-       user.battlePass || 0,user.createdAt || new Date()]
+       user.battlePass || 0,Boolean(user.blocked),user.createdAt || new Date()]
     );
     return;
   }
@@ -112,11 +115,12 @@ async function saveUser(user) {
 
 async function auth(req, res, next) {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   const id = verifyToken(token);
   if (!id) return res.status(401).json({ error: 'Войдите в аккаунт' });
   const user = await getUser(id);
   if (!user) return res.status(401).json({ error: 'Сессия недействительна' });
+  if (Boolean(user.blocked)) return res.status(403).json({ error: 'Аккаунт заблокирован' });
   req.user = user;
   next();
 }
@@ -155,7 +159,7 @@ app.post('/api/auth/register', async (req, res) => {
       const result = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS id FROM users');
       id = Number(result.rows[0].id);
     } else id = nextId(read('users'));
-    const user = { id, nickname, password: hash(password), role: 'Пользователь', description: 'Новый участник EPM', avatar: '', posts: 0, topics: 0, level: 1, battlePass: 0, createdAt: new Date().toISOString() };
+    const user = { id, nickname, password: hash(password), role: 'Пользователь', description: 'Новый участник EPM', avatar: '', posts: 0, topics: 0, level: 1, battlePass: 0, blocked: false, createdAt: new Date().toISOString() };
     await saveUser(user);
     res.status(201).json({ token: makeToken(id), user: safeUser(user) });
   } catch (error) {
@@ -172,12 +176,13 @@ app.post('/api/auth/login', async (req, res) => {
     if (pool) {
       const result = await pool.query(
         `SELECT id, nickname, password, role, description, avatar, posts, topics,
-                level, battle_pass AS "battlePass", created_at AS "createdAt"
+                level, battle_pass AS "battlePass", blocked, created_at AS "createdAt"
          FROM users WHERE LOWER(nickname) = LOWER($1)`, [nickname]
       );
       user = result.rows[0] || null;
     } else user = read('users').find((item) => String(item.nickname).toLowerCase() === nickname.toLowerCase());
     if (!user || user.password !== password) return res.status(401).json({ error: 'Неверный ник или пароль' });
+    if (Boolean(user.blocked)) return res.status(403).json({ error: 'Аккаунт заблокирован' });
     res.json({ token: makeToken(user.id), user: safeUser(user) });
   } catch (error) {
     console.error('Login error:', error);
@@ -190,7 +195,9 @@ app.post('/api/auth/logout', (req, res) => res.json({ ok: true }));
 
 app.get('/api/profile/:id', async (req, res) => {
   try {
-    const user = await getUser(Number(req.params.id));
+    const profileId = Number(req.params.id);
+    if (!Number.isSafeInteger(profileId) || profileId < 1) return res.status(400).json({ error: 'Некорректный пользователь' });
+    const user = await getUser(profileId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json({ user: safeUser(user) });
   } catch (error) {
@@ -215,8 +222,8 @@ app.get('/api/admin/users', auth, async (req, res) => {
   if (!isCreator(req.user)) return res.status(403).json({ error: 'Доступ только для Создателя' });
   try {
     const users = pool
-      ? (await pool.query(`SELECT id, nickname, role, description, posts, topics, avatar FROM users ORDER BY id`)).rows
-      : read('users').map((user) => ({ id:user.id,nickname:user.nickname,role:user.role || 'Пользователь',description:user.description || '',posts:user.posts || 0,topics:user.topics || 0,avatar:user.avatar || '' }));
+      ? (await pool.query(`SELECT id, nickname, role, description, posts, topics, avatar, blocked, created_at AS "createdAt" FROM users ORDER BY id`)).rows
+      : read('users').map((user) => ({ id:user.id,nickname:user.nickname,role:user.role || 'Пользователь',description:user.description || '',posts:user.posts || 0,topics:user.topics || 0,avatar:user.avatar || '',blocked:Boolean(user.blocked),createdAt:user.createdAt || null }));
     res.json({ users });
   } catch (error) {
     console.error('Admin users error:', error);
@@ -224,19 +231,22 @@ app.get('/api/admin/users', auth, async (req, res) => {
   }
 });
 
-app.patch('/api/admin/users/:id/role', auth, async (req, res) => {
+app.patch('/api/admin/users/:id/status', auth, async (req, res) => {
   if (!isCreator(req.user)) return res.status(403).json({ error: 'Доступ только для Создателя' });
-  const role = String(req.body.role || '');
-  if (!ROLES.includes(role)) return res.status(400).json({ error: 'Неизвестная роль' });
+  const userId = Number(req.params.id);
+  if (!Number.isSafeInteger(userId) || userId < 1) return res.status(400).json({ error: 'Некорректный пользователь' });
+  if (userId === Number(req.user.id)) return res.status(400).json({ error: 'Нельзя заблокировать собственный аккаунт' });
+  if (typeof req.body.blocked !== 'boolean') return res.status(400).json({ error: 'Статус блокировки должен быть true или false' });
   try {
-    const user = await getUser(Number(req.params.id));
+    const user = await getUser(userId);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    user.role = role;
+    if (user.role === 'Создатель') return res.status(403).json({ error: 'Аккаунт Создателя нельзя заблокировать' });
+    user.blocked = req.body.blocked;
     await saveUser(user);
     res.json({ user: safeUser(user) });
   } catch (error) {
-    console.error('Admin role error:', error);
-    res.status(500).json({ error: 'Не удалось изменить роль' });
+    console.error('Admin status error:', error);
+    res.status(500).json({ error: 'Не удалось изменить статус пользователя' });
   }
 });
 
@@ -291,7 +301,7 @@ app.post('/api/battlepass/claim', auth, async (req, res) => {
     const key = premium ? 'premiumClaimed' : 'claimed'; state[key] = Array.isArray(state[key]) ? state[key] : [];
     if (state[key].includes(level)) return res.status(409).json({ error:'Награда уже получена' });
     state[key].push(level); await saveBP(state); res.json({ ok:true,level,premium });
-  } catch (error) { console.error('Battle Pass claim error:', error); res.status(500).json({ error:'Не удалось получить награду' }); }
+  } catch (error) { console.error('Battle Pass claim error:',error); res.status(500).json({ error:'Не удалось получить награду' }); }
 });
 
 app.get('/api/topics', async (req, res) => {
@@ -306,24 +316,16 @@ app.get('/api/topics', async (req, res) => {
 app.get('/api/topics/:id', async (req, res) => {
   try {
     let topic;
-    if (pool) {
-      topic = (await pool.query(`SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics WHERE id=$1`,[req.params.id])).rows[0];
-    } else topic = read('topics').find((item)=>String(item.id)===String(req.params.id));
+    if (pool) topic = (await pool.query(`SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics WHERE id=$1`,[req.params.id])).rows[0];
+    else topic = read('topics').find((item)=>String(item.id)===String(req.params.id));
     if (!topic) return res.status(404).json({ error:'Тема не найдена' });
-
     let replies;
-    if (pool) {
-      replies = (await pool.query(`SELECT id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt" FROM replies WHERE topic_id=$1 ORDER BY id`,[topic.id])).rows;
-    } else replies = read('replies').filter((item)=>String(item.topicId)===String(topic.id));
-
+    if (pool) replies = (await pool.query(`SELECT id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt" FROM replies WHERE topic_id=$1 ORDER BY id`,[topic.id])).rows;
+    else replies = read('replies').filter((item)=>String(item.topicId)===String(topic.id));
     const topicUser = await getUser(Number(topic.authorId));
     topic.authorProfile = publicAuthor(topicUser);
     replies = await Promise.all(replies.map(async (reply)=>({ ...reply, authorProfile:publicAuthor(await getUser(Number(reply.authorId))) })));
-
-    if (pool) {
-      await pool.query('UPDATE topics SET views=views+1 WHERE id=$1',[topic.id]);
-      topic.views = Number(topic.views||0)+1;
-    }
+    if (pool) { await pool.query('UPDATE topics SET views=views+1 WHERE id=$1',[topic.id]); topic.views = Number(topic.views||0)+1; }
     res.json({ ...topic, replies });
   } catch (error) { console.error('Topic load error:',error); res.status(500).json({ error:'Ошибка загрузки темы' }); }
 });
@@ -452,6 +454,16 @@ app.post('/api/profile/:id/messages', auth, async (req, res) => {
 
 app.get('/api/news', (req,res)=>{const newsFile=path.join(DATA_DIR,'news.json');if(!fs.existsSync(newsFile))fs.writeFileSync(newsFile,'[]','utf8');res.json(readJsonFile(newsFile));});
 function readJsonFile(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return [];}}
+
 app.use(express.static(__dirname));
 app.use((err,req,res,next)=>{console.error('EPM API error:',err);if(res.headersSent)return next(err);res.status(500).json({error:'Внутренняя ошибка сервера'});});
-app.listen(PORT,()=>console.log(`EPM server started on port ${PORT}`));
+
+(async () => {
+  try {
+    await initDatabase();
+    app.listen(PORT,()=>console.log(`EPM server started on port ${PORT}`));
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    process.exit(1);
+  }
+})();
