@@ -6,18 +6,7 @@
 <title>Управление — EPM</title>
 <link rel="stylesheet" href="style.css">
 <style>
-.admin{width:min(1100px,92%);margin:auto;padding:50px 0 90px}
-.admin-head{text-align:center;margin-bottom:30px}.admin-head h1{font:800 48px Oxanium;margin:10px 0}.admin-head p{color:#9098a5}
-.admin-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap}
-.admin-search{flex:1;min-width:220px;background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.12);padding:12px 14px;border-radius:9px;outline:none}.admin-search:focus{border-color:#8170ba}
-.admin-refresh{border:1px solid #8170ba;background:#6654a5;color:#fff;border-radius:9px;padding:12px 16px;cursor:pointer}.admin-refresh:disabled{opacity:.5;cursor:not-allowed}
-.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.admin-stat{background:rgba(12,16,23,.9);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}.admin-stat b{display:block;font:700 22px Oxanium;color:#fff}.admin-stat span{color:#777f8c;font-size:12px}
-.admin-card{border:1px solid rgba(255,255,255,.1);background:rgba(12,16,23,.9);border-radius:16px;padding:20px;overflow:auto}
-.admin-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)}.admin-row:last-child{border-bottom:0}
-.admin-name b{display:block;color:#fff;font:700 18px Oxanium}.admin-name small{display:block;color:#727b88;margin-top:5px;line-height:1.5}.user-status{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px}.user-status.online{color:#82e6a2}.user-status.blocked{color:#ff8f9a}.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-.user-actions{display:flex;gap:8px;align-items:center}.status-button{border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:11px 15px;cursor:pointer;background:#171c25;min-width:130px}.status-button.block{border-color:rgba(255,120,130,.3)}.status-button.unblock{border-color:rgba(120,220,160,.3)}.status-button:disabled{opacity:.5;cursor:not-allowed}
-.notice{padding:14px;border-radius:10px;margin-bottom:15px;background:rgba(110,85,170,.12);color:#bdb2e7}.error{color:#ff8f9a}.empty{text-align:center;color:#777f8c;padding:35px}
-@media(max-width:700px){.admin-row{grid-template-columns:1fr}.admin-head h1{font-size:38px}.admin-stats{grid-template-columns:1fr}.user-actions{align-items:stretch;flex-direction:column}.status-button{width:100%;box-sizing:border-box}}
+.admin{width:min(1100px,92%);margin:auto;padding:50px 0 90px}.admin-head{text-align:center;margin-bottom:30px}.admin-head h1{font:800 48px Oxanium;margin:10px 0}.admin-head p{color:#9098a5}.admin-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap}.admin-search{flex:1;min-width:220px;background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.12);padding:12px 14px;border-radius:9px;outline:none}.admin-search:focus{border-color:#8170ba}.admin-refresh{border:1px solid #8170ba;background:#6654a5;color:#fff;border-radius:9px;padding:12px 16px;cursor:pointer}.admin-refresh:disabled{opacity:.5;cursor:not-allowed}.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.admin-stat{background:rgba(12,16,23,.9);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}.admin-stat b{display:block;font:700 22px Oxanium;color:#fff}.admin-stat span{color:#777f8c;font-size:12px}.admin-card{border:1px solid rgba(255,255,255,.1);background:rgba(12,16,23,.9);border-radius:16px;padding:20px;overflow:auto}.admin-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)}.admin-row:last-child{border-bottom:0}.admin-name b{display:block;color:#fff;font:700 18px Oxanium}.admin-name small{display:block;color:#727b88;margin-top:5px;line-height:1.5}.user-status{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px}.user-status.online{color:#82e6a2}.user-status.blocked{color:#ff8f9a}.dot{width:7px;height:7px;border-radius:50%;background:currentColor}.user-actions{display:flex;gap:8px;align-items:center}.status-button,.role-button{border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:11px 15px;cursor:pointer;background:#171c25;min-width:130px}.status-button.block{border-color:rgba(255,120,130,.3)}.status-button.unblock{border-color:rgba(120,220,160,.3)}.role-button{border-color:rgba(129,112,186,.45);background:#29233d}.role-select{background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:11px 10px;min-width:190px;outline:none}.role-select:focus{border-color:#8170ba}.status-button:disabled,.role-button:disabled,.role-select:disabled{opacity:.5;cursor:not-allowed}.notice{padding:14px;border-radius:10px;margin-bottom:15px;background:rgba(110,85,170,.12);color:#bdb2e7}.error{color:#ff8f9a}.empty{text-align:center;color:#777f8c;padding:35px}@media(max-width:900px){.user-actions{flex-wrap:wrap}}@media(max-width:700px){.admin-row{grid-template-columns:1fr}.admin-head h1{font-size:38px}.admin-stats{grid-template-columns:1fr}.user-actions{align-items:stretch;flex-direction:column}.status-button,.role-button,.role-select{width:100%;box-sizing:border-box}}
 </style>
 </head>
 <body>
@@ -31,48 +20,14 @@
 </main>
 <footer>EPM © 2026 · Staff Panel</footer>
 <script>
-const token=()=>localStorage.getItem('epmToken')||'';
-const notice=document.getElementById('notice'),users=document.getElementById('users'),search=document.getElementById('search'),refresh=document.getElementById('refresh');
-let allUsers=[];
+const token=()=>localStorage.getItem('epmToken')||'';const notice=document.getElementById('notice'),users=document.getElementById('users'),search=document.getElementById('search'),refresh=document.getElementById('refresh');let allUsers=[];
 function msg(text,error=false){notice.innerHTML='<div class="notice '+(error?'error':'')+'">'+esc(text)+'</div>';if(!error)setTimeout(()=>{notice.innerHTML=''},2500)}
-function render(){
- const q=search.value.trim().toLowerCase();
- const list=allUsers.filter(u=>String(u.nickname||'').toLowerCase().includes(q));
- document.getElementById('totalUsers').textContent=allUsers.length;
- document.getElementById('blockedUsers').textContent=allUsers.filter(u=>Boolean(u.blocked)).length;
- document.getElementById('activeUsers').textContent=allUsers.filter(u=>!Boolean(u.blocked)).length;
- if(!list.length){users.innerHTML='<div class="empty">Пользователи не найдены.</div>';return}
- users.innerHTML=list.map(u=>{
-   const blocked=Boolean(u.blocked);
-   const creator=u.role==='Создатель';
-   const status=blocked?'<span class="user-status blocked"><span class="dot"></span>Заблокирован</span>':'<span class="user-status online"><span class="dot"></span>Активен</span>';
-   const action=creator?'':'<button class="status-button '+(blocked?'unblock':'block')+'" data-status-id="'+Number(u.id)+'" data-next="'+(!blocked)+'">'+(blocked?'Разблокировать':'Заблокировать')+'</button>';
-   return '<div class="admin-row"><div class="admin-name"><b>'+esc(u.nickname)+'</b><small>ID '+Number(u.id)+' · Роль: '+esc(u.role||'Пользователь')+' · Тем: '+Number(u.topics||0)+' · Ответов: '+Number(u.posts||0)+'</small>'+status+'</div><div class="user-actions">'+action+'</div></div>';
- }).join('');
- document.querySelectorAll('[data-status-id]').forEach(btn=>btn.onclick=()=>changeStatus(Number(btn.dataset.statusId),btn,btn.dataset.next==='true'));
-}
-async function changeStatus(id,button,blocked){
- button.disabled=true;button.textContent=blocked?'Сохранение...':'Сохранение...';
- try{
-  const r=await fetch('/api/admin/users/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({blocked})});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error||'Не удалось изменить статус');
-  const index=allUsers.findIndex(u=>Number(u.id)===id);
-  if(index>=0)allUsers[index]={...allUsers[index],...(d.user||{}),blocked};
-  msg(blocked?'Пользователь заблокирован.':'Пользователь разблокирован.');render();
- }catch(e){msg(e.message||'Ошибка изменения статуса',true);button.disabled=false;button.textContent=blocked?'Заблокировать':'Разблокировать'}
-}
-async function load(){
- users.innerHTML='Проверка доступа...';refresh.disabled=true;
- try{
-  const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token()}});const d=await r.json().catch(()=>({}));
-  if(!r.ok||d?.user?.role!=='Создатель'){document.querySelector('.admin').innerHTML='<section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Нет доступа</h1><p>Админ-панель доступна только пользователю с ролью «Создатель».</p><a href="index.html" style="display:inline-block;margin-top:18px;padding:12px 18px;border-radius:9px;background:#6654a5;color:#fff;text-decoration:none">Вернуться на сайт</a></section>';return}
-  const usersResponse=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+token()}});const usersData=await usersResponse.json().catch(()=>({}));
-  if(!usersResponse.ok)throw new Error(usersData.error||'Нет доступа');allUsers=Array.isArray(usersData.users)?usersData.users:[];render();
- }catch(e){msg(e.message||'Не удалось подключиться к серверу',true);users.innerHTML='<div class="empty">Не удалось загрузить пользователей.</div>'}finally{refresh.disabled=false}
-}
-function esc(s=''){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}
-search.addEventListener('input',render);refresh.onclick=load;load();
+const roles=['Пользователь','Стример','Стажер','Мл.Хелпер','Хелпер','Ст.Хелпер','Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'];
+function render(){const q=search.value.trim().toLowerCase();const list=allUsers.filter(u=>String(u.nickname||'').toLowerCase().includes(q));document.getElementById('totalUsers').textContent=allUsers.length;document.getElementById('blockedUsers').textContent=allUsers.filter(u=>Boolean(u.blocked)).length;document.getElementById('activeUsers').textContent=allUsers.filter(u=>!Boolean(u.blocked)).length;if(!list.length){users.innerHTML='<div class="empty">Пользователи не найдены.</div>';return}users.innerHTML=list.map(u=>{const blocked=Boolean(u.blocked),creator=u.role==='Создатель';const status=blocked?'<span class="user-status blocked"><span class="dot"></span>Заблокирован</span>':'<span class="user-status online"><span class="dot"></span>Активен</span>';const options=roles.map(r=>'<option value="'+esc(r)+'" '+(r===u.role?'selected':'')+'>'+esc(r)+'</option>').join('');const roleControl=creator?'<select class="role-select" disabled title="Роль Создателя защищена">'+options+'</select><button class="role-button" disabled>Изменить роль</button>':'<select class="role-select" data-role-id="'+Number(u.id)+'">'+options+'</select><button class="role-button" data-role-button="'+Number(u.id)+'">Изменить роль</button>';const action=creator?'':'<button class="status-button '+(blocked?'unblock':'block')+'" data-status-id="'+Number(u.id)+'" data-next="'+(!blocked)+'">'+(blocked?'Разблокировать':'Заблокировать')+'</button>';return '<div class="admin-row"><div class="admin-name"><b>'+esc(u.nickname)+'</b><small>ID '+Number(u.id)+' · Роль: '+esc(u.role||'Пользователь')+' · Тем: '+Number(u.topics||0)+' · Ответов: '+Number(u.posts||0)+'</small>'+status+'</div><div class="user-actions">'+roleControl+action+'</div></div>'}).join('');document.querySelectorAll('[data-status-id]').forEach(btn=>btn.onclick=()=>changeStatus(Number(btn.dataset.statusId),btn,btn.dataset.next==='true'));document.querySelectorAll('[data-role-button]').forEach(btn=>btn.onclick=()=>{const id=Number(btn.dataset.roleButton);const select=document.querySelector('[data-role-id="'+id+'"]');changeRole(id,btn,select?.value||'')})}
+async function changeStatus(id,button,blocked){button.disabled=true;try{const r=await fetch('/api/admin/users/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({blocked})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Не удалось изменить статус');const i=allUsers.findIndex(u=>Number(u.id)===id);if(i>=0)allUsers[i]={...allUsers[i],...(d.user||{}),blocked};msg(blocked?'Пользователь заблокирован.':'Пользователь разблокирован.');render()}catch(e){msg(e.message||'Ошибка изменения статуса',true);button.disabled=false}}
+async function changeRole(id,button,role){if(!roles.includes(role))return msg('Неизвестная роль',true);button.disabled=true;try{const r=await fetch('/api/admin/users/'+id+'/role',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({role})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Не удалось изменить роль');const i=allUsers.findIndex(u=>Number(u.id)===id);if(i>=0)allUsers[i]={...allUsers[i],...(d.user||{}),role};msg('Роль пользователя изменена.');render()}catch(e){msg(e.message||'Ошибка изменения роли',true);button.disabled=false}}
+async function load(){users.innerHTML='Проверка доступа...';refresh.disabled=true;try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token()}}),d=await r.json().catch(()=>({}));if(!r.ok||d?.user?.role!=='Создатель'){document.querySelector('.admin').innerHTML='<section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Нет доступа</h1><p>Админ-панель доступна только пользователю с ролью «Создатель».</p><a href="index.html" style="display:inline-block;margin-top:18px;padding:12px 18px;border-radius:9px;background:#6654a5;color:#fff;text-decoration:none">Вернуться на сайт</a></section>';return}const usersResponse=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+token()}}),usersData=await usersResponse.json().catch(()=>({}));if(!usersResponse.ok)throw new Error(usersData.error||'Нет доступа');allUsers=Array.isArray(usersData.users)?usersData.users:[];render()}catch(e){msg(e.message||'Не удалось подключиться к серверу',true);users.innerHTML='<div class="empty">Не удалось загрузить пользователей.</div>'}finally{refresh.disabled=false}}
+function esc(s=''){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}search.addEventListener('input',render);refresh.onclick=load;load();
 </script>
 </body>
 </html>
