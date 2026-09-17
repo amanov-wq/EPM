@@ -282,15 +282,6 @@ app.get('/api/battlepass', auth, async (req, res) => {
   } catch (error) { console.error('Battle Pass load error:', error); res.status(500).json({ error:'Ошибка загрузки Battle Pass' }); }
 });
 
-app.post('/api/battlepass/xp', auth, async (req, res) => {
-  const amount = Number(req.body.amount);
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000) return res.status(400).json({ error:'Недопустимое количество XP' });
-  try {
-    const state = await getBP(req.user.id); state.xp = Math.min(2000,(Number(state.xp)||0)+amount); await saveBP(state);
-    res.json({ xp:state.xp, level:Math.min(20,Math.floor(state.xp/100)+1) });
-  } catch (error) { console.error('Battle Pass XP error:', error); res.status(500).json({ error:'Не удалось сохранить XP' }); }
-});
-
 app.post('/api/battlepass/claim', auth, async (req, res) => {
   const level = Number(req.body.level); const premium = Boolean(req.body.premium);
   if (!Number.isInteger(level) || level < 1 || level > 20) return res.status(400).json({ error:'Недопустимый уровень' });
