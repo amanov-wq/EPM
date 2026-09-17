@@ -1,1 +1,78 @@
-<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Управление — EPM</title><link rel="stylesheet" href="style.css"><style>.admin{width:min(1100px,92%);margin:auto;padding:50px 0 90px}.admin-head{text-align:center;margin-bottom:30px}.admin-head h1{font:800 48px Oxanium;margin:10px 0}.admin-head p{color:#9098a5}.admin-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap}.admin-search{flex:1;min-width:220px;background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.12);padding:12px 14px;border-radius:9px;outline:none}.admin-refresh,.role-save{border:1px solid #8170ba;background:#6654a5;color:#fff;border-radius:9px;padding:12px 16px;cursor:pointer}.role-save:disabled{opacity:.5;cursor:not-allowed}.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.admin-stat{background:rgba(12,16,23,.9);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}.admin-stat b{display:block;font:700 22px Oxanium;color:#fff}.admin-stat span{color:#777f8c;font-size:12px}.admin-card{border:1px solid rgba(255,255,255,.1);background:rgba(12,16,23,.9);border-radius:16px;padding:20px;overflow:auto}.admin-row{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)}.admin-row:last-child{border-bottom:0}.admin-name b{display:block;color:#fff}.admin-name small{color:#727b88}.role-controls{display:flex;gap:8px;align-items:center}.role-select{flex:1;min-width:180px;background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.14);padding:11px 12px;border-radius:9px;outline:none}.role-select:focus{border-color:#8170ba}.notice{padding:14px;border-radius:10px;margin-bottom:15px;background:rgba(110,85,170,.12);color:#bdb2e7}.error{color:#ff8f9a}.empty{text-align:center;color:#777f8c;padding:35px}@media(max-width:700px){.admin-row{grid-template-columns:1fr}.admin-head h1{font-size:38px}.admin-stats{grid-template-columns:1fr}.role-controls{align-items:stretch;flex-direction:column}.role-select,.role-save{width:100%;box-sizing:border-box}}</style></head><body><header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav></header><main class="admin"><section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Управление</h1><p>Панель управления доступна только Создателю.</p></section><div id="notice"></div><div class="admin-stats"><div class="admin-stat"><b id="totalUsers">—</b><span>Пользователей</span></div><div class="admin-stat"><b id="staffUsers">—</b><span>Участников команды</span></div><div class="admin-stat"><b id="creatorUsers">—</b><span>Создателей</span></div></div><div class="admin-toolbar"><input id="search" class="admin-search" placeholder="Поиск по нику..." autocomplete="off"><button id="refresh" class="admin-refresh">↻ Обновить</button></div><section class="admin-card" id="users">Проверка доступа...</section></main><footer>EPM © 2026 · Staff Panel</footer><script src="auth.js"></script><script>const token=()=>localStorage.getItem('epmToken')||'';const notice=document.getElementById('notice'),users=document.getElementById('users'),search=document.getElementById('search');let allUsers=[];const ROLES=['Пользователь','Стример','Стажер','Мл.Хелпер','Хелпер','Ст.Хелпер','Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'];function msg(t,err=false){notice.innerHTML='<div class="notice '+(err?'error':'')+'">'+t+'</div>';if(!err)setTimeout(()=>{notice.innerHTML=''},2500)}function render(){const q=search.value.trim().toLowerCase();const list=allUsers.filter(u=>(u.nickname||'').toLowerCase().includes(q));document.getElementById('totalUsers').textContent=allUsers.length;document.getElementById('staffUsers').textContent=allUsers.filter(u=>['Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'].includes(u.role)).length;document.getElementById('creatorUsers').textContent=allUsers.filter(u=>u.role==='Создатель').length;if(!list.length){users.innerHTML='<div class="empty">Пользователи не найдены.</div>';return}users.innerHTML=list.map(u=>{const options=ROLES.map(r=>'<option value="'+esc(r)+'" '+(u.role===r?'selected':'')+'>'+esc(r)+'</option>').join('');return '<div class="admin-row"><div class="admin-name"><b>'+esc(u.nickname)+'</b><small>ID '+u.id+' · '+esc(u.description||'')+' · Тем: '+(u.topics||0)+' · Ответов: '+(u.posts||0)+'</small></div><div class="role-controls"><select class="role-select" data-role-id="'+u.id+'">'+options+'</select><button class="role-save" data-save-id="'+u.id+'">Изменить роль</button></div></div>'}).join('');document.querySelectorAll('[data-save-id]').forEach(btn=>btn.onclick=()=>changeRole(Number(btn.dataset.saveId),btn))}async function changeRole(id,button){const select=document.querySelector('[data-role-id="'+id+'"]');const role=select?.value;if(!role)return;button.disabled=true;button.textContent='Сохранение...';try{const r=await fetch('/api/admin/users/'+id+'/role',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({role})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Не удалось изменить роль');const index=allUsers.findIndex(u=>Number(u.id)===id);if(index>=0)allUsers[index]={...allUsers[index],...(d.user||{}),role};msg('Роль пользователя изменена: '+role);render()}catch(e){msg(e.message||'Ошибка изменения роли',true);button.disabled=false;button.textContent='Изменить роль'}}async function load(){users.innerHTML='Проверка доступа...';try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token()}});const d=await r.json().catch(()=>({}));if(!r.ok||d?.user?.role!=='Создатель'){document.querySelector('.admin').innerHTML='<section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Нет доступа</h1><p>Админ-панель доступна только пользователю с ролью «Создатель».</p><a href="index.html" style="display:inline-block;margin-top:18px;padding:12px 18px;border-radius:9px;background:#6654a5;color:#fff;text-decoration:none">Вернуться на сайт</a></section>';return}const usersResponse=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+token()}});const usersData=await usersResponse.json().catch(()=>({}));if(!usersResponse.ok)throw new Error(usersData.error||'Нет доступа');allUsers=usersData.users||[];render()}catch(e){msg(e.message||'Не удалось подключиться к серверу',true);users.innerHTML=''}}function esc(s=''){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}search.addEventListener('input',render);document.getElementById('refresh').onclick=load;load();</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Управление — EPM</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.admin{width:min(1100px,92%);margin:auto;padding:50px 0 90px}
+.admin-head{text-align:center;margin-bottom:30px}.admin-head h1{font:800 48px Oxanium;margin:10px 0}.admin-head p{color:#9098a5}
+.admin-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap}
+.admin-search{flex:1;min-width:220px;background:#11151d;color:#fff;border:1px solid rgba(255,255,255,.12);padding:12px 14px;border-radius:9px;outline:none}.admin-search:focus{border-color:#8170ba}
+.admin-refresh{border:1px solid #8170ba;background:#6654a5;color:#fff;border-radius:9px;padding:12px 16px;cursor:pointer}.admin-refresh:disabled{opacity:.5;cursor:not-allowed}
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.admin-stat{background:rgba(12,16,23,.9);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}.admin-stat b{display:block;font:700 22px Oxanium;color:#fff}.admin-stat span{color:#777f8c;font-size:12px}
+.admin-card{border:1px solid rgba(255,255,255,.1);background:rgba(12,16,23,.9);border-radius:16px;padding:20px;overflow:auto}
+.admin-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)}.admin-row:last-child{border-bottom:0}
+.admin-name b{display:block;color:#fff;font:700 18px Oxanium}.admin-name small{display:block;color:#727b88;margin-top:5px;line-height:1.5}.user-status{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:12px}.user-status.online{color:#82e6a2}.user-status.blocked{color:#ff8f9a}.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.user-actions{display:flex;gap:8px;align-items:center}.status-button{border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:11px 15px;cursor:pointer;background:#171c25;min-width:130px}.status-button.block{border-color:rgba(255,120,130,.3)}.status-button.unblock{border-color:rgba(120,220,160,.3)}.status-button:disabled{opacity:.5;cursor:not-allowed}
+.notice{padding:14px;border-radius:10px;margin-bottom:15px;background:rgba(110,85,170,.12);color:#bdb2e7}.error{color:#ff8f9a}.empty{text-align:center;color:#777f8c;padding:35px}
+@media(max-width:700px){.admin-row{grid-template-columns:1fr}.admin-head h1{font-size:38px}.admin-stats{grid-template-columns:1fr}.user-actions{align-items:stretch;flex-direction:column}.status-button{width:100%;box-sizing:border-box}}
+</style>
+</head>
+<body>
+<header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a></nav></header>
+<main class="admin">
+<section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Управление пользователями</h1><p>Доступ только для пользователя с ролью «Создатель».</p></section>
+<div id="notice"></div>
+<div class="admin-stats"><div class="admin-stat"><b id="totalUsers">—</b><span>Всего пользователей</span></div><div class="admin-stat"><b id="activeUsers">—</b><span>Активных аккаунтов</span></div><div class="admin-stat"><b id="blockedUsers">—</b><span>Заблокированных</span></div></div>
+<div class="admin-toolbar"><input id="search" class="admin-search" placeholder="Поиск по нику..." autocomplete="off"><button id="refresh" class="admin-refresh">↻ Обновить</button></div>
+<section class="admin-card" id="users">Проверка доступа...</section>
+</main>
+<footer>EPM © 2026 · Staff Panel</footer>
+<script>
+const token=()=>localStorage.getItem('epmToken')||'';
+const notice=document.getElementById('notice'),users=document.getElementById('users'),search=document.getElementById('search'),refresh=document.getElementById('refresh');
+let allUsers=[];
+function msg(text,error=false){notice.innerHTML='<div class="notice '+(error?'error':'')+'">'+esc(text)+'</div>';if(!error)setTimeout(()=>{notice.innerHTML=''},2500)}
+function render(){
+ const q=search.value.trim().toLowerCase();
+ const list=allUsers.filter(u=>String(u.nickname||'').toLowerCase().includes(q));
+ document.getElementById('totalUsers').textContent=allUsers.length;
+ document.getElementById('blockedUsers').textContent=allUsers.filter(u=>Boolean(u.blocked)).length;
+ document.getElementById('activeUsers').textContent=allUsers.filter(u=>!Boolean(u.blocked)).length;
+ if(!list.length){users.innerHTML='<div class="empty">Пользователи не найдены.</div>';return}
+ users.innerHTML=list.map(u=>{
+   const blocked=Boolean(u.blocked);
+   const creator=u.role==='Создатель';
+   const status=blocked?'<span class="user-status blocked"><span class="dot"></span>Заблокирован</span>':'<span class="user-status online"><span class="dot"></span>Активен</span>';
+   const action=creator?'':'<button class="status-button '+(blocked?'unblock':'block')+'" data-status-id="'+Number(u.id)+'" data-next="'+(!blocked)+'">'+(blocked?'Разблокировать':'Заблокировать')+'</button>';
+   return '<div class="admin-row"><div class="admin-name"><b>'+esc(u.nickname)+'</b><small>ID '+Number(u.id)+' · Роль: '+esc(u.role||'Пользователь')+' · Тем: '+Number(u.topics||0)+' · Ответов: '+Number(u.posts||0)+'</small>'+status+'</div><div class="user-actions">'+action+'</div></div>';
+ }).join('');
+ document.querySelectorAll('[data-status-id]').forEach(btn=>btn.onclick=()=>changeStatus(Number(btn.dataset.statusId),btn,btn.dataset.next==='true'));
+}
+async function changeStatus(id,button,blocked){
+ button.disabled=true;button.textContent=blocked?'Сохранение...':'Сохранение...';
+ try{
+  const r=await fetch('/api/admin/users/'+id+'/status',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({blocked})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Не удалось изменить статус');
+  const index=allUsers.findIndex(u=>Number(u.id)===id);
+  if(index>=0)allUsers[index]={...allUsers[index],...(d.user||{}),blocked};
+  msg(blocked?'Пользователь заблокирован.':'Пользователь разблокирован.');render();
+ }catch(e){msg(e.message||'Ошибка изменения статуса',true);button.disabled=false;button.textContent=blocked?'Заблокировать':'Разблокировать'}
+}
+async function load(){
+ users.innerHTML='Проверка доступа...';refresh.disabled=true;
+ try{
+  const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token()}});const d=await r.json().catch(()=>({}));
+  if(!r.ok||d?.user?.role!=='Создатель'){document.querySelector('.admin').innerHTML='<section class="admin-head"><span class="hero-tag">EPM STAFF</span><h1>Нет доступа</h1><p>Админ-панель доступна только пользователю с ролью «Создатель».</p><a href="index.html" style="display:inline-block;margin-top:18px;padding:12px 18px;border-radius:9px;background:#6654a5;color:#fff;text-decoration:none">Вернуться на сайт</a></section>';return}
+  const usersResponse=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+token()}});const usersData=await usersResponse.json().catch(()=>({}));
+  if(!usersResponse.ok)throw new Error(usersData.error||'Нет доступа');allUsers=Array.isArray(usersData.users)?usersData.users:[];render();
+ }catch(e){msg(e.message||'Не удалось подключиться к серверу',true);users.innerHTML='<div class="empty">Не удалось загрузить пользователей.</div>'}finally{refresh.disabled=false}
+}
+function esc(s=''){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]))}
+search.addEventListener('input',render);refresh.onclick=load;load();
+</script>
+</body>
+</html>
