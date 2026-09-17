@@ -1,0 +1,52 @@
+name: Apply EPM forum permissions
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: apply forum permissions') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch server.js
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const file = 'server.js';
+          let text = fs.readFileSync(file, 'utf8');
+          if (text.includes('EPM FORUM PERMISSIONS V2')) {
+            console.log('Forum permissions are already patched.');
+            process.exit(0);
+          }
+
+          const start = text.indexOf("app.post('/api/topics/:id/close'");
+          const end = text.indexOf("\napp.delete('/api/topics/:id'", start);
+          if (start < 0 || end < 0) {
+            throw new Error('Не найден текущий маршрут закрытия темы.');
+          }
+
+          const replacement = `// EPM FORUM PERMISSIONS V2\napp.post('/api/topics/:id/close',auth,async(req,res)=>{\n  if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});\n  try{\n    const now=new Date().toISOString();\n    if(pool){\n      const result=await pool.query('UPDATE topics SET closed=true,updated_at=$2 WHERE id=$1 RETURNING closed',[req.params.id,now]);\n      if(!result.rows[0])return res.status(404).json({error:'Тема не найдена'});\n      return res.json({ok:true,closed:true});\n    }\n    const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));\n    if(!topic)return res.status(404).json({error:'Тема не найдена'});\n    topic.closed=true;topic.updatedAt=now;write('topics',topics);\n    return res.json({ok:true,closed:true});\n  }catch(error){console.error('Topic close error:',error);return res.status(500).json({error:'Не удалось закрыть тему'});}\n});\n\napp.post('/api/topics/:id/open',auth,async(req,res)=>{\n  if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});\n  try{\n    const now=new Date().toISOString();\n    if(pool){\n      const result=await pool.query('UPDATE topics SET closed=false,updated_at=$2 WHERE id=$1 RETURNING closed',[req.params.id,now]);\n      if(!result.rows[0])return res.status(404).json({error:'Тема не найдена'});\n      return res.json({ok:true,closed:false});\n    }\n    const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));\n    if(!topic)return res.status(404).json({error:'Тема не найдена'});\n    topic.closed=false;topic.updatedAt=now;write('topics',topics);\n    return res.json({ok:true,closed:false});\n  }catch(error){console.error('Topic open error:',error);return res.status(500).json({error:'Не удалось открыть тему'});}\n});`;
+
+          text = text.slice(0, start) + replacement + text.slice(end);
+          fs.writeFileSync(file, text, 'utf8');
+          console.log('server.js patched.');
+
+      - name: Commit patch and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/apply-forum-permissions.yml
+          git add server.js .github/workflows/apply-forum-permissions.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: apply forum permissions"
+          git push
