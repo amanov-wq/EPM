@@ -73,7 +73,7 @@ async function getUser(id) {
 }
 async function saveUser(user) {
   if (pool) {
-    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level=EXCLUDED.battle_pass,blocked=EXCLUDED.blocked`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,user.battlePass||0,Boolean(user.blocked),user.createdAt||new Date()]);
+    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,blocked=EXCLUDED.blocked,created_at=EXCLUDED.created_at`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,Boolean(user.blocked),user.createdAt||new Date()]);
     return;
   }
   const users = read('users');
