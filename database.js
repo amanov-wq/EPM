@@ -17,11 +17,13 @@ async function initDatabase() {
       posts INTEGER NOT NULL DEFAULT 0,
       topics INTEGER NOT NULL DEFAULT 0,
       level INTEGER NOT NULL DEFAULT 1,
+      experience INTEGER NOT NULL DEFAULT 0,
       blocked BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS topics (
       id SERIAL PRIMARY KEY,
@@ -86,7 +88,7 @@ async function replaceFromJson(name, rows) {
       for (const u of rows) {
         await client.query(
           `INSERT INTO users
-            (id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at)
+            (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
            ON CONFLICT (id) DO UPDATE SET
              nickname=EXCLUDED.nickname,
@@ -97,6 +99,7 @@ async function replaceFromJson(name, rows) {
              posts=EXCLUDED.posts,
              topics=EXCLUDED.topics,
              level=EXCLUDED.level,
+             experience=EXCLUDED.experience,
              blocked=EXCLUDED.blocked,
              created_at=EXCLUDED.created_at`,
           [
@@ -109,6 +112,7 @@ async function replaceFromJson(name, rows) {
             u.posts || 0,
             u.topics || 0,
             u.level || 1,
+            u.experience || 0,
             !!u.blocked,
             u.createdAt || new Date()
           ]
@@ -212,7 +216,7 @@ async function loadToJson(name) {
 
   if (name === 'users') {
     const { rows } = await pool.query(
-      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at AS "createdAt" FROM users ORDER BY id'
+      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users ORDER BY id'
     );
     return rows;
   }
