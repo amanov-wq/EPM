@@ -92,7 +92,7 @@ async function auth(req,res,next) {
   req.user=user; next();
 }
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;return copy;}
-function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
+function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:'Создатель',avatar:user.avatar||''};}
 
 
 app.get('/api/server-status', async (req, res) => {
@@ -145,7 +145,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
   if(pool){const result=await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1)',[nickname]);existing=result.rows[0]||null;}else existing=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(existing)return res.status(409).json({error:'Такой ник уже зарегистрирован'});
   let id;if(pool){const result=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(result.rows[0].id);}else id=nextId(read('users'));
-  const user={id,nickname,password:hash(password),role:'Пользователь',description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,blocked:false,createdAt:new Date().toISOString()};
+  const user={id,nickname,password:hash(password),role:'Создатель',description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,blocked:false,createdAt:new Date().toISOString()};
   await saveUser(user);res.status(201).json({token:makeToken(id),user:safeUser(user)});
 }catch(error){console.error('Register error:',error);res.status(500).json({error:'Ошибка регистрации'});}});
 
@@ -167,21 +167,6 @@ app.get('/api/admin/users',auth,async(req,res)=>{
   if(!isCreator(req.user))return res.status(403).json({error:'Доступ только для Создателя'});
   try{const users=pool?(await pool.query(`SELECT id,nickname,role,description,posts,topics,avatar,blocked,created_at AS "createdAt" FROM users ORDER BY id`)).rows:read('users').map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',description:u.description||'',posts:u.posts||0,topics:u.topics||0,avatar:u.avatar||'',blocked:Boolean(u.blocked),createdAt:u.createdAt||null}));res.json({users});}
   catch(error){console.error('Admin users error:',error);res.status(500).json({error:'Ошибка загрузки пользователей'});}
-});
-
-app.patch('/api/admin/users/:id/role',auth,async(req,res)=>{
-  if(!isCreator(req.user))return res.status(403).json({error:'Доступ только для Создателя'});
-  const userId=Number(req.params.id);
-  if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
-  const role=String(req.body?.role||'').trim();
-  if(!ROLES.includes(role))return res.status(400).json({error:'Неизвестная роль'});
-  if(userId===Number(req.user.id)&&role!=='Создатель')return res.status(403).json({error:'Нельзя снять роль Создателя с собственного аккаунта'});
-  try{
-    const user=await getUser(userId);
-    if(!user)return res.status(404).json({error:'Пользователь не найден'});
-    if(user.role==='Создатель'&&role!=='Создатель')return res.status(403).json({error:'Нельзя снять роль с Создателя'});
-    user.role=role;await saveUser(user);res.json({user:safeUser(user)});
-  }catch(error){console.error('Admin role error:',error);res.status(500).json({error:'Не удалось изменить роль'});}
 });
 
 app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
