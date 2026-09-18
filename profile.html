@@ -85,9 +85,9 @@
 <div class="profile-id" id="profileId">ID —</div>
 <p id="description">Новый участник EPM</p>
 <div class="profile-stats">
+<div><b id="messages">0</b><span>Сообщения</span></div>
 <div><b id="topics">0</b><span>Темы</span></div>
-<div><b id="replies">0</b><span>Ответы</span></div>
-<div><b id="level">1</b><span>Уровень</span></div>
+<div><b id="experience">0 XP</b><span>Опыт</span></div>
 </div>
 </div>
 <div class="profile-actions">
@@ -113,14 +113,6 @@
 <a class="profile-action" href="forum.html">Перейти на форум</a>
 </section>
 
-<section class="profile-section">
-<span class="hero-tag">PROFILE WALL</span><h2>Стена профиля</h2>
-<form id="messageForm" class="profile-message-form">
-<textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение..." required></textarea>
-<button class="profile-action profile-message-submit" type="submit">Отправить</button>
-</form>
-<div class="wall-list" id="wallList"></div>
-</section>
 </section>
 </main>
 
@@ -131,19 +123,11 @@
 <button class="settings-close" id="settingsClose" type="button" aria-label="Закрыть">×</button>
 </div>
 
-<div class="settings-group">
-<h3>👤 Профиль</h3>
 <div class="settings-field"><label for="descriptionInput">Описание</label><textarea id="descriptionInput" maxlength="500" placeholder="Расскажите о себе..."></textarea></div>
 <div class="settings-actions"><button class="profile-action" id="saveProfile" type="button">Сохранить профиль</button></div>
 <div class="settings-message" id="profileMessage"></div>
 </div>
 
-<div class="settings-group">
-<h3>🔐 Безопасность</h3>
-<div class="settings-field"><label for="currentPassword">Текущий пароль</label><input id="currentPassword" type="password" autocomplete="current-password"></div>
-<div class="settings-field"><label for="newPassword">Новый пароль</label><input id="newPassword" type="password" autocomplete="new-password" minlength="6"></div>
-<div class="settings-field"><label for="confirmPassword">Повтор нового пароля</label><input id="confirmPassword" type="password" autocomplete="new-password" minlength="6"></div>
-<div class="password-note">Минимум 6 символов. После смены пароля текущая сессия остаётся активной.</div>
 <div class="settings-actions"><button class="profile-action" id="savePassword" type="button">Изменить пароль</button></div>
 <div class="settings-message" id="passwordMessage"></div>
 </div>
