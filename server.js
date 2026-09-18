@@ -100,25 +100,38 @@ app.get('/api/server-status', async (req, res) => {
   const host = 'EstamonHost.ru';
   const port = 25565;
   try {
-    const response = await fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(host + ':' + port)}`, {
+    const address = encodeURIComponent(`${host}:${port}`);
+    const response = await fetch(`https://api.mcstatus.io/v2/status/java/${address}?query=false&timeout=5`, {
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(7000)
     });
-    if (!response.ok) throw new Error(`status API HTTP ${response.status}`);
-    const data = await response.json();
+    const raw = await response.text();
+    let data = {};
+    try { data = JSON.parse(raw); } catch {}
+    if (!response.ok) throw new Error(data.error || raw || `status API HTTP ${response.status}`);
+
     res.json({
       host,
       port,
       online: Boolean(data.online),
-      version: data.version || data.protocol?.name || null,
-      players: Number(data.players?.online || 0),
-      maxPlayers: Number(data.players?.max || 0),
-      motd: Array.isArray(data.motd?.clean) ? data.motd.clean.join(' ') : (data.motd?.clean || ''),
+      version: data.version?.name_clean || data.version?.name_raw || null,
+      protocol: data.version?.protocol || null,
+      players: Number(data.players?.online ?? 0),
+      maxPlayers: Number(data.players?.max ?? 0),
+      motd: data.motd?.clean || '',
+      gamemode: data.gamemode || 'Survival',
       checkedAt: new Date().toISOString()
     });
   } catch (error) {
     console.error('Server status error:', error);
-    res.status(502).json({ host, port, online: false, unavailable: true, error: 'Не удалось проверить сервер', checkedAt: new Date().toISOString() });
+    res.status(502).json({
+      host,
+      port,
+      online: false,
+      unavailable: true,
+      error: 'Не удалось проверить сервер',
+      checkedAt: new Date().toISOString()
+    });
   }
 });
 
