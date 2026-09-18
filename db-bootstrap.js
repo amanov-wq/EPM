@@ -6,8 +6,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const files = {
   users: path.join(DATA_DIR, 'users.json'),
   topics: path.join(DATA_DIR, 'topics.json'),
-  replies: path.join(DATA_DIR, 'replies.json'),
-  battlepass: path.join(DATA_DIR, 'battlepass.json')
+  replies: path.join(DATA_DIR, 'replies.json')
 };
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
