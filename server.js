@@ -95,6 +95,33 @@ async function auth(req,res,next) {
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;return copy;}
 function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
 
+
+app.get('/api/server-status', async (req, res) => {
+  const host = 'EstamonHost.ru';
+  const port = 25565;
+  try {
+    const response = await fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(host + ':' + port)}`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error(`status API HTTP ${response.status}`);
+    const data = await response.json();
+    res.json({
+      host,
+      port,
+      online: Boolean(data.online),
+      version: data.version || data.protocol?.name || null,
+      players: Number(data.players?.online || 0),
+      maxPlayers: Number(data.players?.max || 0),
+      motd: Array.isArray(data.motd?.clean) ? data.motd.clean.join(' ') : (data.motd?.clean || ''),
+      checkedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Server status error:', error);
+    res.status(502).json({ host, port, online: false, unavailable: true, error: 'Не удалось проверить сервер', checkedAt: new Date().toISOString() });
+  }
+});
+
 app.get('/api/health',(req,res)=>res.json({ok:true,project:'EPM',database:Boolean(pool)}));
 app.get('/api/roles',(req,res)=>res.json({roles:ROLES,topicCreationFrom:'Хелпер'}));
 
