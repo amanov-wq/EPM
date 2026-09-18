@@ -73,7 +73,7 @@ async function getUser(id) {
 }
 async function saveUser(user) {
   if (pool) {
-    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,blocked=EXCLUDED.blocked,created_at=EXCLUDED.created_at`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,Boolean(user.blocked),user.createdAt||new Date()]);
+    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,experience=EXCLUDED.experience,blocked=EXCLUDED.blocked,created_at=EXCLUDED.created_at`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,user.experience||0,Boolean(user.blocked),user.createdAt||new Date()]);
     return;
   }
   const users = read('users');
@@ -152,7 +152,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
 
 app.post('/api/auth/login',async(req,res)=>{try{
   const nickname=String(req.body.nickname||'').trim(),password=hash(String(req.body.password||''));let user=null;
-  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
+  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(!user||user.password!==password)return res.status(401).json({error:'Неверный ник или пароль'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   if(user.role!=='Создатель'){user.role='Создатель';await saveUser(user);}
