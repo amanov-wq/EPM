@@ -28,7 +28,7 @@ async function loadServer() {
     $('players').textContent = data.online ? `${data.players}/${data.maxPlayers || '—'}` : '—';
     $('playersText').textContent = data.online ? 'игроков онлайн' : 'сервер недоступен';
     $('version').textContent = data.version || '—';
-    $('gamemode').textContent = 'Survival';
+    $('gamemode').textContent = data.gamemode || 'Survival';
 
     $('javaInfo').textContent = data.online
       ? `Java-сервер доступен. Порт: ${data.port}. ${data.version ? `Версия: ${data.version}.` : ''}`
