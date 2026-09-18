@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="style.css">
 <style>
 .server-page{width:min(1180px,92%);margin:auto;padding:55px 0 90px}.server-hero{padding:34px;border-radius:20px;background:linear-gradient(145deg,rgba(18,21,29,.97),rgba(8,11,16,.97));border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 70px rgba(0,0,0,.3)}.server-title-row{display:flex;justify-content:space-between;gap:25px;align-items:flex-start}.server-title-row h1{font:700 clamp(38px,6vw,62px) Oxanium;margin:10px 0}.server-title-row p{color:#858e9b;margin:0;max-width:650px}.server-status{display:inline-flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#0b0f15;font:600 12px Oxanium;color:#8b94a0}.status-dot{width:9px;height:9px;border-radius:50%;background:#69727f}.server-status.online{color:#b8d9c0;border-color:rgba(105,170,120,.25)}.server-status.online .status-dot{background:#69b879;box-shadow:0 0 14px #69b879}.server-status.offline{color:#d7a5a5}.server-status.offline .status-dot{background:#c76565;box-shadow:0 0 14px #c76565}.server-address{margin-top:28px;padding:18px 20px;border-radius:13px;background:#080b10;border:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;gap:15px}.server-address{flex-wrap:wrap}.server-address em{font:700 12px Oxanium;color:#657080;letter-spacing:2px;margin-left:auto}.server-address span{color:#747e8b;font:600 11px Oxanium;letter-spacing:1.5px}.server-address strong{font:700 20px Oxanium;color:#d9dce3}.server-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.server-card{padding:22px;border-radius:15px;background:linear-gradient(145deg,#12161e,#0b0e14);border:1px solid rgba(255,255,255,.08)}.server-card small{display:block;color:#737d89;font:600 10px Oxanium;letter-spacing:1.4px;text-transform:uppercase}.server-card b{display:block;margin-top:10px;font:700 25px Oxanium}.server-card span{display:block;margin-top:5px;color:#727b87;font-size:12px}.server-platforms{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}.platform{padding:22px;border-radius:15px;background:linear-gradient(145deg,#12161e,#0b0e14);border:1px solid rgba(255,255,255,.08)}.platform-head{display:flex;justify-content:space-between;align-items:center}.platform h2{margin:0;font:700 21px Oxanium}.platform-badge{padding:5px 9px;border-radius:6px;background:rgba(116,94,183,.14);color:#bcaee5;font:600 10px Oxanium}.platform p{color:#808995;font-size:13px;line-height:1.6}.refresh-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;color:#69727f;font:600 11px Oxanium}.refresh-btn{padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#11151c;color:#d0d4dc;font:600 11px Oxanium;cursor:pointer}.refresh-btn:hover{border-color:#8e79ce;color:#eee8ff}.server-error{margin-top:14px;padding:14px;border-radius:10px;border:1px solid rgba(199,101,101,.2);background:rgba(120,40,40,.08);color:#c89a9a;font-size:13px;display:none}.server-note{margin-top:14px;color:#69727f;font-size:12px;line-height:1.6}.server-note a{color:#9f91ce}@media(max-width:850px){.server-grid{grid-template-columns:1fr 1fr}.server-platforms{grid-template-columns:1fr}.server-title-row{display:block}.server-status{margin-top:20px}}@media(max-width:550px){.server-page{padding-top:30px}.server-hero{padding:20px}.server-grid{grid-template-columns:1fr}.server-address{display:block}.server-address strong{display:block;margin-top:8px}}
+
+.server-ip-box{margin-top:14px;padding:28px;border-radius:15px;background:linear-gradient(145deg,#12161e,#0b0e14);border:1px solid rgba(255,255,255,.08);text-align:center}.server-ip-label{color:#737d89;font:600 11px Oxanium;letter-spacing:1.5px;text-transform:uppercase}.server-ip-value{margin:12px 0 18px;font:700 clamp(26px,4vw,38px) Oxanium;color:#d9dce3;letter-spacing:.5px}.copy-ip-btn{padding:12px 20px;border:1px solid rgba(142,121,206,.35);border-radius:9px;background:#11151c;color:#d8d0f0;font:600 12px Oxanium;cursor:pointer;transition:.2s}.copy-ip-btn:hover{border-color:#8e79ce;background:#171321;color:#fff}.copy-ip-status{height:16px;margin-top:9px;color:#8fae98;font:500 11px Oxanium}@media(max-width:550px){.server-ip-box{padding:22px}.server-ip-value{font-size:25px}.copy-ip-btn{width:100%}}
 </style>
 </head>
 <body>
@@ -30,11 +32,11 @@
 <div id="status" class="server-status"><i class="status-dot"></i><span>Проверка...</span></div>
 </div>
 <div class="server-address"><span>SERVER</span><strong>EstamonHost.ru</strong><em>ESTAMONHOST.RU</em></div>
-<div class="server-grid">
-<div class="server-card"><small>Статус</small><b id="players">—</b><span id="playersText">проверка сервера...</span></div>
-<div class="server-card"><small>Версия</small><b id="version">—</b><span>актуальная версия сервера</span></div>
-<div class="server-card"><small>Порт</small><b>25565</b><span>Java Edition</span></div>
-
+<div class="server-ip-box">
+<div class="server-ip-label">IP Сервера</div>
+<div class="server-ip-value" id="serverIp">EstamonHost.ru</div>
+<button class="copy-ip-btn" id="copyIp" type="button">Скопировать IP</button>
+<div class="copy-ip-status" id="copyStatus"></div>
 </div>
 <div class="server-platforms">
 <div class="platform"><div class="platform-head"><h2>☕ Java Edition</h2><span id="javaBadge" class="platform-badge">Проверка</span></div><p id="javaInfo">Проверяем подключение Java-сервера...</p></div>
@@ -46,6 +48,22 @@
 </section>
 </main>
 <footer class="site-footer">EPM © 2026</footer>
-<script src="server-info.js"></script>
+<script>
+const copyButton = document.getElementById('copyIp');
+const copyStatus = document.getElementById('copyStatus');
+copyButton.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText('EstamonHost.ru');
+    copyButton.textContent = '✓ IP скопирован';
+    copyStatus.textContent = 'EstamonHost.ru скопирован в буфер обмена';
+  } catch {
+    copyStatus.textContent = 'Не удалось скопировать автоматически';
+  }
+  setTimeout(() => {
+    copyButton.textContent = 'Скопировать IP';
+    copyStatus.textContent = '';
+  }, 2200);
+});
+</script>
 </body>
 </html>
