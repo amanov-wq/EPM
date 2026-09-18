@@ -1,99 +1,57 @@
-const SERVER = 'EstamonHost.ru:25565';
-const MAX_PLAYERS = 100;
-const JAVA_API = `https://api.mcsrvstat.us/3/${encodeURIComponent(SERVER)}`;
-const BEDROCK_API = `https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(SERVER)}`;
-
 const $ = (id) => document.getElementById(id);
 
 function setStatus(online) {
   const el = $('status');
   el.className = `server-status ${online ? 'online' : 'offline'}`;
-  el.innerHTML = `<i class="status-dot"></i><span>${online ? 'Онлайн' : 'Оффлайн'}</span>`;
+  el.innerHTML = `<i class="status-dot"></i><span>${online ? 'ОНЛАЙН' : 'ОФФЛАЙН'}</span>`;
 }
 
-function setBadge(id, online, checked = true) {
+function setBadge(id, online, available = true) {
   const el = $(id);
-  if (!checked) {
-    el.textContent = 'Нет данных';
-    el.style.color = '#9aa2ad';
-    return;
-  }
-  el.textContent = online ? 'Онлайн' : 'Оффлайн';
-  el.style.color = online ? '#9dccaa' : '#d7a5a5';
-}
-
-async function getJson(url) {
-  const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'application/json' } });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return response.json();
-}
-
-function applyPlayers(data) {
-  const onlinePlayers = Math.max(0, Number(data?.players?.online || 0));
-  $('players').textContent = `${onlinePlayers}/${MAX_PLAYERS}`;
-  $('playersText').textContent = `${MAX_PLAYERS} мест`;
-}
-
-function applyVersion(data) {
-  $('version').textContent = data?.version || data?.protocol?.name || 'Неизвестно';
+  if (!el) return;
+  el.textContent = available ? (online ? 'ОНЛАЙН' : 'ОФФЛАЙН') : 'НЕТ ДАННЫХ';
+  el.style.color = available ? (online ? '#9dccaa' : '#d7a5a5') : '#9aa2ad';
 }
 
 async function loadServer() {
-  $('refresh').disabled = true;
+  const button = $('refresh');
+  button.disabled = true;
   $('error').style.display = 'none';
-  $('error').textContent = '';
-
   try {
-    const [javaResult, bedrockResult] = await Promise.allSettled([getJson(JAVA_API), getJson(BEDROCK_API)]);
-    const javaOk = javaResult.status === 'fulfilled';
-    const bedrockOk = bedrockResult.status === 'fulfilled';
-    const java = javaOk ? javaResult.value : { online: false };
-    const bedrock = bedrockOk ? bedrockResult.value : { online: false };
-    const online = Boolean(java.online || bedrock.online);
+    const response = await fetch('/api/server-status', { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'status error');
 
-    setStatus(online);
-    setBadge('javaBadge', Boolean(java.online), javaOk);
-    setBadge('bedrockBadge', Boolean(bedrock.online), bedrockOk);
+    setStatus(Boolean(data.online));
+    setBadge('javaBadge', Boolean(data.online), true);
 
-    if (java.online) {
-      applyPlayers(java);
-      applyVersion(java);
-      $('gamemode').textContent = java.gamemode || 'Survival';
-      $('javaInfo').textContent = ['Java-сервер доступен.', java.version ? `Версия: ${java.version}.` : '', java.software ? `ПО: ${java.software}.` : ''].filter(Boolean).join(' ');
-    } else {
-      $('javaInfo').textContent = javaOk ? 'Java-сервер сейчас не отвечает на проверку.' : 'Не удалось получить данные Java-сервера.';
-    }
+    $('players').textContent = data.online ? `${data.players}/${data.maxPlayers || '—'}` : '—';
+    $('playersText').textContent = data.online ? 'игроков онлайн' : 'сервер недоступен';
+    $('version').textContent = data.version || '—';
+    $('gamemode').textContent = 'Survival';
 
-    if (bedrock.online) {
-      $('bedrockInfo').textContent = ['Bedrock-сервер доступен.', bedrock.version ? `Версия: ${bedrock.version}.` : '', bedrock.gamemode ? `Режим: ${bedrock.gamemode}.` : ''].filter(Boolean).join(' ');
-      if (!java.online) {
-        applyPlayers(bedrock);
-        applyVersion(bedrock);
-        $('gamemode').textContent = bedrock.gamemode || 'Survival';
-      }
-    } else {
-      $('bedrockInfo').textContent = bedrockOk ? 'Bedrock-сервер сейчас не отвечает на проверку.' : 'Не удалось получить данные Bedrock-сервера.';
-    }
+    $('javaInfo').textContent = data.online
+      ? `Java-сервер доступен. Порт: ${data.port}. ${data.version ? `Версия: ${data.version}.` : ''}`
+      : 'Java-сервер сейчас оффлайн.';
+    $('bedrockInfo').textContent = 'Отдельный Bedrock-порт не настроен в мониторинге.';
+    setBadge('bedrockBadge', false, false);
 
-    $('tps').textContent = '—';
-    $('tpsText').textContent = 'TPS не передаётся status API';
-    $('updated').textContent = `Последняя проверка: ${new Date().toLocaleTimeString('ru-RU')}`;
-
-    if (!javaOk && !bedrockOk) throw new Error('Оба API недоступны');
+    $('updated').textContent = `Последняя проверка: ${new Date(data.checkedAt || Date.now()).toLocaleTimeString('ru-RU')}`;
   } catch (error) {
     setStatus(false);
     setBadge('javaBadge', false, false);
     setBadge('bedrockBadge', false, false);
-    $('players').textContent = `0/${MAX_PLAYERS}`;
-    $('playersText').textContent = `${MAX_PLAYERS} мест`;
+    $('players').textContent = '—';
+    $('playersText').textContent = 'нет данных';
     $('version').textContent = '—';
     $('gamemode').textContent = 'Survival';
-    $('tps').textContent = '—';
-    $('tpsText').textContent = 'нет данных';
-    $('error').textContent = 'Не удалось получить данные о сервере. Попробуйте обновить страницу позже.';
+    $('javaInfo').textContent = 'Не удалось получить данные о Java-сервере.';
+    $('bedrockInfo').textContent = 'Не удалось получить данные о сервере.';
+    $('updated').textContent = 'Последняя проверка: ошибка';
+    $('error').textContent = 'Не удалось проверить сервер. Попробуйте обновить страницу.';
     $('error').style.display = 'block';
   } finally {
-    $('refresh').disabled = false;
+    button.disabled = false;
   }
 }
 
