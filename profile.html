@@ -88,12 +88,10 @@
 <div><b id="topics">0</b><span>Темы</span></div>
 <div><b id="replies">0</b><span>Ответы</span></div>
 <div><b id="level">1</b><span>Уровень</span></div>
-<div><b id="battlePass">0</b><span>Battle Pass</span></div>
 </div>
 </div>
 <div class="profile-actions">
 <button class="profile-action" id="settingsButton" type="button">⚙ Настройки</button>
-<a class="profile-action" href="battlepass.html">🎟 Battle Pass</a>
 <a class="profile-action profile-admin" id="adminButton" href="admin.html" hidden>🛡 Админка</a>
 <button class="profile-action profile-danger" id="logout" type="button">🚪 Выйти</button>
 </div>
@@ -173,7 +171,7 @@ const name=current.nickname||'EPM';document.getElementById('nickname').textConte
 document.getElementById('role').textContent=current.role||'Пользователь';document.getElementById('profileId').textContent='ID '+Number(current.id||0);
 document.getElementById('description').textContent=current.description||'Новый участник EPM';
 document.getElementById('topics').textContent=Number(current.topics||0);document.getElementById('replies').textContent=Number(current.posts||0);
-document.getElementById('level').textContent=Number(current.level||1);document.getElementById('battlePass').textContent=Number(current.battlePass||0);
+document.getElementById('level').textContent=Number(current.level||1);
 document.getElementById('infoNickname').textContent=name;document.getElementById('infoRole').textContent=current.role||'Пользователь';
 document.getElementById('infoCreated').textContent=formatDate(current.createdAt);document.getElementById('infoStatus').textContent=current.blocked?'Заблокирован':'Активен';
 setAvatar(current.avatar||'',name);admin.hidden=current.role!=='Создатель';document.getElementById('descriptionInput').value=current.description||'';
