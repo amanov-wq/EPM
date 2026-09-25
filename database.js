@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 
-const connectionString = process.env.DATABASE_URL;
+// Render PostgreSQL connection is supplied through DATABASE_URL.\nconst connectionString = process.env.DATABASE_URL;
 const pool = connectionString ? new Pool({ connectionString, ssl: { rejectUnauthorized: false } }) : null;
 
 async function initDatabase() {
