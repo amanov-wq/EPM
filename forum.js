@@ -70,7 +70,7 @@ function render(){
   if(!list.length){topicsEl.innerHTML='<div class="forum-empty"><strong>В этом разделе пока нет тем</strong><span>Создай первую тему и начни обсуждение.</span></div>';return}
   topicsEl.innerHTML=list.map(t=>{
     const u=userData(t);
-    return `<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div class="forum-topic-avatar">${avatar(u)}</div><div class="forum-topic-main"><div class="forum-topic-badges">${t.pinned?'<span class="topic-badge pinned">📌 Закреплено</span>':''}${t.closed?'<span class="topic-badge closed">Закрыто</span>':''}<span class="topic-badge">${esc(t.category||'Обсуждение')}</span></div><h3>${esc(t.title)}</h3><p>${esc(u.nickname)} · <b>${esc(u.role)}</b> · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${Number(t.repliesCount||0)}</b>ответов</div><div><b>${Number(t.views||0)}</b>просмотров</div></div></a>`;
+    return `<a class="forum-topic" href="topic.html?id=${encodeURIComponent(t.id)}"><div class="forum-topic-avatar">${avatar(u)}</div><div class="forum-topic-main"><div class="forum-topic-badges">${t.pinned?'<span class="topic-badge pinned">📌 Закреплено</span>':''}${t.closed?'<span class="topic-badge closed">Закрыто</span>':''}<span class="topic-badge">${esc(t.category||'Помощь')}</span></div><h3>${esc(t.title)}</h3><p>${esc(u.nickname)} · <b>${esc(u.role)}</b> · ${time(t.updatedAt||t.createdAt)}</p></div><div class="forum-topic-meta"><div><b>${Number(t.repliesCount||0)}</b>ответов</div><div><b>${Number(t.views||0)}</b>просмотров</div></div></a>`;
   }).join('');
 }
 
