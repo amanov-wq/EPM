@@ -233,38 +233,6 @@ app.get('/api/unbans',async(req,res)=>{
   }catch(error){console.error('Unbans load error:',error);res.status(500).json({error:'Ошибка загрузки истории разблокировок'});}
 });
 
-app.post('/api/punishments/:id/unban',auth,async(req,res)=>{
-  if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Разблокировать могут только Ст.Модератор и выше'});
-  const punishmentId=Number(req.params.id);
-  if(!Number.isSafeInteger(punishmentId)||punishmentId<1)return res.status(400).json({error:'Некорректная блокировка'});
-  const reason=String(req.body.reason||'Разблокировка по решению команды').trim().slice(0,500)||'Разблокировка по решению команды';
-  try{
-    if(pool){
-      const client=await pool.connect();
-      try{
-        await client.query('BEGIN');
-        const p=(await client.query(`SELECT id,nickname,mode,server FROM punishment_history WHERE id=$1`,[punishmentId])).rows[0];
-        if(!p){await client.query('ROLLBACK');return res.status(404).json({error:'Блокировка не найдена'});}
-        const existing=(await client.query('SELECT id FROM unban_history WHERE punishment_id=$1',[punishmentId])).rows[0];
-        if(existing){await client.query('ROLLBACK');return res.status(409).json({error:'Эта блокировка уже отмечена как разблокированная'});}
-        const result=await client.query(`INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server,created_at) VALUES($1,$2,$3,$4,$5,$6,NOW()) RETURNING id,punishment_id AS "punishmentId",nickname,moderator,reason,mode,server,created_at AS "createdAt"`,[p.id,p.nickname,req.user.nickname,reason,p.mode||'EPM',p.server||p.mode||'EPM']);
-        await client.query('COMMIT');
-        return res.status(201).json({ok:true,unban:result.rows[0]});
-      }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
-    }
-    const file=path.join(DATA_DIR,'unban_history.json');
-    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
-    const punishments=readJsonFile(path.join(DATA_DIR,'punishment_history.json'));
-    const p=punishments.find(x=>Number(x.id)===punishmentId);
-    if(!p)return res.status(404).json({error:'Блокировка не найдена'});
-    const unbans=readJsonFile(file);
-    if(unbans.some(x=>Number(x.punishmentId)===punishmentId))return res.status(409).json({error:'Эта блокировка уже отмечена как разблокированная'});
-    const unban={id:nextId(unbans),punishmentId:p.id,nickname:p.nickname,moderator:req.user.nickname,reason,mode:p.mode||'EPM',server:p.server||p.mode||'EPM',createdAt:new Date().toISOString()};
-    unbans.push(unban);fs.writeFileSync(file,JSON.stringify(unbans,null,2),'utf8');
-    return res.status(201).json({ok:true,unban});
-  }catch(error){console.error('Unban error:',error);res.status(500).json({error:'Не удалось сохранить разблокировку'});}
-});
-
 app.get('/api/punishments',async(req,res)=>{
   try{
     if(pool){
