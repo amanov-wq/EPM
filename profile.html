@@ -169,6 +169,11 @@
   .profile-edit{padding:10px}
   .profile-edit-box{padding:20px;border-radius:14px}
 }
+
+/* FIX: hidden attribute must always hide guest/user blocks.
+   .guest-profile uses display:flex, which can override the browser's default [hidden] rule. */
+#guest[hidden],
+#user[hidden]{display:none!important}
 </style>
 </head>
 <body>
