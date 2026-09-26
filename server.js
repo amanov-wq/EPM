@@ -62,6 +62,7 @@ const ROLE_LEVEL = Object.fromEntries(ROLES.map((role, index) => [role, index]))
 const roleLevel = (user) => ROLE_LEVEL[user?.role] ?? 0;
 const canCreateTopic = (user) => roleLevel(user) >= ROLE_LEVEL['Хелпер'];
 const isStaff = (user) => roleLevel(user) >= ROLE_LEVEL['Модератор'];
+const canAccessAdmin = (user) => roleLevel(user) >= ROLE_LEVEL['Мл.Хелпер'];
 const isCreator = (user) => user?.role === 'Создатель';
 
 async function getUser(id) {
@@ -166,13 +167,13 @@ app.patch('/api/profile',auth,async(req,res)=>{try{req.user.description=String(r
 app.patch('/api/profile/password',auth,async(req,res)=>{try{const currentPassword=String(req.body.currentPassword||''),newPassword=String(req.body.newPassword||''),confirmPassword=String(req.body.confirmPassword||'');if(!currentPassword)return res.status(400).json({error:'Введите текущий пароль'});if(newPassword.length<6)return res.status(400).json({error:'Новый пароль должен быть не короче 6 символов'});if(newPassword!==confirmPassword)return res.status(400).json({error:'Новые пароли не совпадают'});if(hash(currentPassword)!==req.user.password)return res.status(400).json({error:'Текущий пароль указан неверно'});if(hash(newPassword)===req.user.password)return res.status(400).json({error:'Новый пароль должен отличаться от текущего'});req.user.password=hash(newPassword);await saveUser(req.user);res.json({ok:true});}catch(error){console.error('Password update error:',error);res.status(500).json({error:'Не удалось изменить пароль'});}});
 
 app.get('/api/admin/users',auth,async(req,res)=>{
-  if(!isCreator(req.user))return res.status(403).json({error:'Доступ только для Создателя'});
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
   try{const users=pool?(await pool.query(`SELECT id,nickname,role,description,posts,topics,avatar,blocked,created_at AS "createdAt" FROM users ORDER BY id`)).rows:read('users').map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',description:u.description||'',posts:u.posts||0,topics:u.topics||0,avatar:u.avatar||'',blocked:Boolean(u.blocked),createdAt:u.createdAt||null}));res.json({users});}
   catch(error){console.error('Admin users error:',error);res.status(500).json({error:'Ошибка загрузки пользователей'});}
 });
 
 app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
-  if(!isCreator(req.user))return res.status(403).json({error:'Доступ только для Создателя'});
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
   const userId=Number(req.params.id);
   if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
   if(userId===Number(req.user.id))return res.status(400).json({error:'Нельзя заблокировать собственный аккаунт'});
