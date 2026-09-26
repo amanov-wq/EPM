@@ -53,7 +53,6 @@ function render(){
    list.innerHTML='<div class="pun-item head"><div>Игрок</div><div>Режим</div><div>Дата</div></div>'+
    rows.map(p=>'<div class="pun-item"><div class="pun-nick">🔓 '+esc(p.nickname)+'</div><div class="pun-reason">'+esc(p.mode||p.server||'EPM')+'</div><div class="pun-date">'+esc(fmt(p.createdAt))+'</div></div>').join('');
  }
- document.querySelectorAll('.pun-unban').forEach(btn=>btn.onclick=()=>unban(btn.dataset.id));
 }
 async function load(){
  try{
