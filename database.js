@@ -64,8 +64,19 @@ async function initDatabase() {
       nickname TEXT NOT NULL,
       reason TEXT NOT NULL,
       moderator TEXT NOT NULL,
+      expires_at TIMESTAMPTZ,
+      mode TEXT NOT NULL DEFAULT 'EPM',
+      punishment_type TEXT NOT NULL DEFAULT 'BAN',
+      server TEXT NOT NULL DEFAULT 'EPM',
+      external_id TEXT UNIQUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+    ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'EPM';
+    ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS punishment_type TEXT NOT NULL DEFAULT 'BAN';
+    ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS server TEXT NOT NULL DEFAULT 'EPM';
+    ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS external_id TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS punishment_history_external_id_idx ON punishment_history(external_id) WHERE external_id IS NOT NULL;
   `);
 
   return true;
