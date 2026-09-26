@@ -1,0 +1,9 @@
+api-url: "https://epmofficial.onrender.com"
+api-key: "PUT_BLOOD_API_KEY_HERE"
+mode: "Blood Shed World"
+
+commands:
+  - ban
+  - tempban
+
+send-delay-ticks: 20
