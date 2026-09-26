@@ -221,6 +221,50 @@ app.delete('/api/topics/:id',auth,async(req,res)=>{if(!isStaff(req.user))return 
 app.get('/api/profile/:id/messages',async(req,res)=>{try{const profileUserId=Number(req.params.id);if(!Number.isInteger(profileUserId))return res.status(400).json({error:'Некорректный пользователь'});if(pool){const result=await pool.query(`SELECT id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt" FROM profile_messages WHERE profile_user_id=$1 ORDER BY id DESC`,[profileUserId]);return res.json({messages:result.rows});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')).filter(i=>Number(i.profileUserId)===profileUserId).sort((a,b)=>Number(b.id)-Number(a.id));res.json({messages});}catch(error){console.error('Profile messages load error:',error);res.status(500).json({error:'Ошибка загрузки сообщений'});}});
 app.post('/api/profile/:id/messages',auth,async(req,res)=>{const profileUserId=Number(req.params.id),content=String(req.body.content||'').trim();if(!Number.isInteger(profileUserId))return res.status(400).json({error:'Некорректный пользователь'});if(!content||content.length>1000)return res.status(400).json({error:'Сообщение должно содержать от 1 до 1000 символов'});try{const profile=await getUser(profileUserId);if(!profile)return res.status(404).json({error:'Пользователь не найден'});const now=new Date().toISOString();if(pool){const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);return res.status(201).json({message:result.rows[0]});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')),message={id:nextId(messages),profileUserId,authorId:req.user.id,author:req.user.nickname,content,createdAt:now};messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');res.status(201).json({message});}catch(error){console.error('Profile message create error:',error);res.status(500).json({error:'Не удалось отправить сообщение'});}});
 
+app.get('/api/unbans',async(req,res)=>{
+  try{
+    if(pool){
+      const result=await pool.query(`SELECT id,punishment_id AS "punishmentId",nickname,moderator,reason,mode,server,created_at AS "createdAt" FROM unban_history ORDER BY created_at DESC,id DESC LIMIT 200`);
+      return res.json({unbans:result.rows});
+    }
+    const file=path.join(DATA_DIR,'unban_history.json');
+    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    return res.json({unbans:readJsonFile(file).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,200)});
+  }catch(error){console.error('Unbans load error:',error);res.status(500).json({error:'Ошибка загрузки истории разблокировок'});}
+});
+
+app.post('/api/punishments/:id/unban',auth,async(req,res)=>{
+  if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Разблокировать могут только Ст.Модератор и выше'});
+  const punishmentId=Number(req.params.id);
+  if(!Number.isSafeInteger(punishmentId)||punishmentId<1)return res.status(400).json({error:'Некорректная блокировка'});
+  const reason=String(req.body.reason||'Разблокировка по решению команды').trim().slice(0,500)||'Разблокировка по решению команды';
+  try{
+    if(pool){
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const p=(await client.query(`SELECT id,nickname,mode,server FROM punishment_history WHERE id=$1`,[punishmentId])).rows[0];
+        if(!p){await client.query('ROLLBACK');return res.status(404).json({error:'Блокировка не найдена'});}
+        const existing=(await client.query('SELECT id FROM unban_history WHERE punishment_id=$1',[punishmentId])).rows[0];
+        if(existing){await client.query('ROLLBACK');return res.status(409).json({error:'Эта блокировка уже отмечена как разблокированная'});}
+        const result=await client.query(`INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server,created_at) VALUES($1,$2,$3,$4,$5,$6,NOW()) RETURNING id,punishment_id AS "punishmentId",nickname,moderator,reason,mode,server,created_at AS "createdAt"`,[p.id,p.nickname,req.user.nickname,reason,p.mode||'EPM',p.server||p.mode||'EPM']);
+        await client.query('COMMIT');
+        return res.status(201).json({ok:true,unban:result.rows[0]});
+      }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+    }
+    const file=path.join(DATA_DIR,'unban_history.json');
+    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const punishments=readJsonFile(path.join(DATA_DIR,'punishment_history.json'));
+    const p=punishments.find(x=>Number(x.id)===punishmentId);
+    if(!p)return res.status(404).json({error:'Блокировка не найдена'});
+    const unbans=readJsonFile(file);
+    if(unbans.some(x=>Number(x.punishmentId)===punishmentId))return res.status(409).json({error:'Эта блокировка уже отмечена как разблокированная'});
+    const unban={id:nextId(unbans),punishmentId:p.id,nickname:p.nickname,moderator:req.user.nickname,reason,mode:p.mode||'EPM',server:p.server||p.mode||'EPM',createdAt:new Date().toISOString()};
+    unbans.push(unban);fs.writeFileSync(file,JSON.stringify(unbans,null,2),'utf8');
+    return res.status(201).json({ok:true,unban});
+  }catch(error){console.error('Unban error:',error);res.status(500).json({error:'Не удалось сохранить разблокировку'});}
+});
+
 app.get('/api/punishments',async(req,res)=>{
   try{
     if(pool){
