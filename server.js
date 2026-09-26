@@ -32,7 +32,7 @@ function write(name, data) { fs.writeFileSync(files[name], JSON.stringify(data, 
 function nextId(rows) { return rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), 0) + 1; }
 function hash(password) { return crypto.createHash('sha256').update(password).digest('hex'); }
 
-const AUTH_SECRET = process.env.EPM_AUTH_SECRET || crypto.randomBytes(32).toString('hex');
+const AUTH_SECRET = process.env.EPM_AUTH_SECRET || crypto.createHash('sha256').update(process.env.DATABASE_URL || 'EPM-PERSISTENT-AUTH-SECRET').digest('hex');
 const TOKEN_TTL = 1000 * 60 * 60 * 24 * 30;
 function makeToken(userId) {
   const exp = Date.now() + TOKEN_TTL;
