@@ -49,6 +49,61 @@
 </main>
 <footer class="site-footer">EPM © 2026</footer>
 <script>
+async function loadServerStatus(){
+  const status=document.getElementById('status');
+  const javaBadge=document.getElementById('javaBadge');
+  const javaInfo=document.getElementById('javaInfo');
+  const bedrockBadge=document.getElementById('bedrockBadge');
+  const bedrockInfo=document.getElementById('bedrockInfo');
+  const error=document.getElementById('error');
+  const updated=document.getElementById('updated');
+  const refresh=document.getElementById('refresh');
+
+  refresh.disabled=true;
+  refresh.textContent='Проверка...';
+  error.style.display='none';
+
+  try{
+    const response=await fetch('/api/server-status',{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.error||'Не удалось получить статус');
+
+    status.classList.toggle('online',Boolean(data.online));
+    status.classList.toggle('offline',!data.online);
+    status.querySelector('span').textContent=data.online?'Онлайн':'Оффлайн';
+
+    javaBadge.textContent=data.online?'Онлайн':'Оффлайн';
+    javaInfo.textContent=data.online
+      ? 'Сервер доступен · '+(data.version||'Версия определяется автоматически')+' · '+Number(data.players||0)+' / '+Number(data.maxPlayers||0)+' игроков'
+      : 'Java-сервер сейчас недоступен.';
+
+    bedrockBadge.textContent=data.online?'Доступен':'Недоступен';
+    bedrockInfo.textContent=data.online
+      ? 'Подключение через поддерживаемую сеть сервера. Порт Java: '+Number(data.port||25565)+'.'
+      : 'Проверка Bedrock недоступна, пока основной сервер оффлайн.';
+
+    updated.textContent='Последняя проверка: '+new Date(data.checkedAt||Date.now()).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }catch(e){
+    status.classList.remove('online');
+    status.classList.add('offline');
+    status.querySelector('span').textContent='Ошибка проверки';
+    javaBadge.textContent='Ошибка';
+    bedrockBadge.textContent='Ошибка';
+    javaInfo.textContent='Не удалось получить актуальный статус сервера.';
+    bedrockInfo.textContent='Не удалось получить актуальный статус сервера.';
+    error.textContent=e.message||'Не удалось проверить сервер';
+    error.style.display='block';
+    updated.textContent='Последняя проверка: ошибка';
+  }finally{
+    refresh.disabled=false;
+    refresh.textContent='↻ Обновить';
+  }
+}
+
+document.getElementById('refresh').addEventListener('click',loadServerStatus);
+loadServerStatus();
+setInterval(loadServerStatus,30000);
+
 const copyButton = document.getElementById('copyIp');
 const copyStatus = document.getElementById('copyStatus');
 copyButton.addEventListener('click', async () => {
