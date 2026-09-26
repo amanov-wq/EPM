@@ -1,0 +1,13 @@
+api-url: "https://epmofficial.onrender.com"
+api-key: "PUT_SERVER_KEY_HERE"
+mode: "Estamon Grief"
+
+# Commands watched by the bridge.
+# Grief: AdvancedBan normally uses ban/tempban.
+# Creative/ES+: Essentials normally uses ban/tempban.
+commands:
+  - ban
+  - tempban
+
+# Delay after the command before sending the record.
+send-delay-ticks: 20
