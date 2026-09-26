@@ -209,6 +209,44 @@ app.delete('/api/topics/:id',auth,async(req,res)=>{if(!isStaff(req.user))return 
 app.get('/api/profile/:id/messages',async(req,res)=>{try{const profileUserId=Number(req.params.id);if(!Number.isInteger(profileUserId))return res.status(400).json({error:'Некорректный пользователь'});if(pool){const result=await pool.query(`SELECT id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt" FROM profile_messages WHERE profile_user_id=$1 ORDER BY id DESC`,[profileUserId]);return res.json({messages:result.rows});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')).filter(i=>Number(i.profileUserId)===profileUserId).sort((a,b)=>Number(b.id)-Number(a.id));res.json({messages});}catch(error){console.error('Profile messages load error:',error);res.status(500).json({error:'Ошибка загрузки сообщений'});}});
 app.post('/api/profile/:id/messages',auth,async(req,res)=>{const profileUserId=Number(req.params.id),content=String(req.body.content||'').trim();if(!Number.isInteger(profileUserId))return res.status(400).json({error:'Некорректный пользователь'});if(!content||content.length>1000)return res.status(400).json({error:'Сообщение должно содержать от 1 до 1000 символов'});try{const profile=await getUser(profileUserId);if(!profile)return res.status(404).json({error:'Пользователь не найден'});const now=new Date().toISOString();if(pool){const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);return res.status(201).json({message:result.rows[0]});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')),message={id:nextId(messages),profileUserId,authorId:req.user.id,author:req.user.nickname,content,createdAt:now};messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');res.status(201).json({message});}catch(error){console.error('Profile message create error:',error);res.status(500).json({error:'Не удалось отправить сообщение'});}});
 
+app.get('/api/punishments',async(req,res)=>{
+  try{
+    if(pool){
+      const result=await pool.query(`SELECT id,nickname,reason,moderator,created_at AS "createdAt" FROM punishment_history ORDER BY created_at DESC,id DESC LIMIT 100`);
+      return res.json({punishments:result.rows});
+    }
+    const file=path.join(DATA_DIR,'punishment_history.json');
+    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const punishments=readJsonFile(file).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,100);
+    res.json({punishments});
+  }catch(error){console.error('Punishments load error:',error);res.status(500).json({error:'Ошибка загрузки истории блокировок'});}
+});
+
+app.post('/api/punishments',auth,async(req,res)=>{
+  if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Добавлять блокировки могут только Ст.Модератор и выше'});
+  const nickname=String(req.body.nickname||'').trim().slice(0,24);
+  const reason=String(req.body.reason||'').trim().slice(0,500);
+  if(!nickname||!reason)return res.status(400).json({error:'Укажи ник игрока и причину блокировки'});
+  try{
+    const createdAt=new Date().toISOString();
+    if(pool){
+      const result=await pool.query(
+        `INSERT INTO punishment_history(nickname,reason,moderator,created_at) VALUES($1,$2,$3,$4)
+         RETURNING id,nickname,reason,moderator,created_at AS "createdAt"`,
+        [nickname,reason,req.user.nickname,createdAt]
+      );
+      return res.status(201).json({punishment:result.rows[0]});
+    }
+    const file=path.join(DATA_DIR,'punishment_history.json');
+    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const punishments=readJsonFile(file);
+    const punishment={id:nextId(punishments),nickname,reason,moderator:req.user.nickname,createdAt};
+    punishments.push(punishment);
+    fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');
+    res.status(201).json({punishment});
+  }catch(error){console.error('Punishment create error:',error);res.status(500).json({error:'Не удалось добавить блокировку'});}
+});
+
 app.get('/api/news',(req,res)=>{const newsFile=path.join(DATA_DIR,'news.json');if(!fs.existsSync(newsFile))fs.writeFileSync(newsFile,'[]','utf8');res.json(readJsonFile(newsFile));});
 function readJsonFile(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return [];}}
 
