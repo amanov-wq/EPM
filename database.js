@@ -71,6 +71,17 @@ async function initDatabase() {
       external_id TEXT UNIQUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS unban_history (
+      id SERIAL PRIMARY KEY,
+      punishment_id INTEGER NOT NULL UNIQUE REFERENCES punishment_history(id) ON DELETE CASCADE,
+      nickname TEXT NOT NULL,
+      moderator TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      mode TEXT NOT NULL DEFAULT 'EPM',
+      server TEXT NOT NULL DEFAULT 'EPM',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
     ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'EPM';
     ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS punishment_type TEXT NOT NULL DEFAULT 'BAN';
