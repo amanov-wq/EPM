@@ -26,10 +26,11 @@ function render(){
  if(!list.length){topicsEl.innerHTML='<div class="forum-empty-new"><strong>'+esc(selected?('В разделе «'+selected+'» пока нет тем'):'Пока нет тем')+'</strong><span>Создай первую тему и начни обсуждение.</span></div>';return}
  topicsEl.innerHTML=list.map(t=>{const u=userData(t);return '<a class="forum-topic-new" href="topic.html?id='+encodeURIComponent(t.id)+'"><div class="forum-topic-avatar">'+avatar(u)+'</div><div class="forum-topic-main-new">'+(t.pinned?'<small style="color:#a99bd4">📌 Закреплено</small>':'')+'<strong>'+esc(t.title||'Без названия')+'</strong><small>'+esc(u.nickname)+' · '+esc(u.role)+' · '+time(t.updatedAt||t.createdAt)+'</small></div><div class="forum-topic-counts"><div><b>'+Number(t.repliesCount||0)+'</b><span>ОТВЕТОВ</span></div><div><b>'+Number(t.views||0)+'</b><span>ПРОСМОТРОВ</span></div></div></a>'}).join('');
 }
-function updateStats(){document.getElementById('topicCount').textContent=topics.length;document.getElementById('replyCount').textContent=topics.reduce((n,t)=>n+Number(t.repliesCount||0),0);document.getElementById('viewCount').textContent=topics.reduce((n,t)=>n+Number(t.views||0),0)}
-async function load(){try{const r=await fetch('/api/topics',{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();topics=Array.isArray(d)?d:[];await enrich();updateStats();render()}catch{topicsEl.innerHTML='<div class="forum-empty-new"><strong>Не удалось загрузить форум</strong><span>Проверьте подключение к серверу.</span></div>'}}
+function updateStats(){}
+async function load(){try{const r=await fetch('/api/topics',{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();topics=Array.isArray(d)?d:[];await enrich();render()}catch{topicsEl.innerHTML='<div class="forum-empty-new"><strong>Не удалось загрузить форум</strong><span>Проверьте подключение к серверу.</span></div>'}}
 async function openAction(){await refreshAuth();modal.classList.add('show');const logged=Boolean(currentUser);guestGate.style.display=logged?'none':'block';form.style.display=logged?'block':'none'}
 document.getElementById('newTopic').onclick=openAction;
+
 document.getElementById('closeGuest').onclick=()=>modal.classList.remove('show');
 document.getElementById('cancel').onclick=()=>modal.classList.remove('show');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('show')};
