@@ -11,9 +11,10 @@ const DATA_DIR = path.join(__dirname, 'data');
 const PUNISHMENT_API_KEYS = Object.freeze({
   'Estamon Grief': process.env.EPM_GRIEF_API_KEY || '',
   'Estamon Creative': process.env.EPM_CREATIVE_API_KEY || '',
-  'Estamon Survial': process.env.EPM_SURVIVAL_API_KEY || ''
+  'Estamon Survial': process.env.EPM_SURVIVAL_API_KEY || '',
+  'Blood Shed World': process.env.EPM_BLOOD_API_KEY || ''
 });
-const PUNISHMENT_MODES = Object.freeze(['Estamon Grief','Estamon Creative','Estamon Survial']);
+const PUNISHMENT_MODES = Object.freeze(['Estamon Grief','Estamon Creative','Estamon Survial','Blood Shed World']);
 function punishmentApiKeyValid(mode, key) {
   const expected = PUNISHMENT_API_KEYS[mode];
   if (!expected || !key) return false;
