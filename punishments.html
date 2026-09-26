@@ -3,7 +3,19 @@
 <style>
 .pun-page{width:min(1100px,92%);margin:auto;padding:42px 0 90px}.pun-head{padding:30px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:linear-gradient(145deg,rgba(17,21,29,.97),rgba(7,10,15,.96));margin-bottom:14px}.pun-kicker{color:#8f79d1;font:700 11px Oxanium;letter-spacing:2px;text-transform:uppercase}.pun-head h1{margin:8px 0;font:800 clamp(34px,6vw,58px)/1 Oxanium}.pun-head p{margin:0;color:#78818e;max-width:700px}.pun-actions{margin-top:20px;display:flex;gap:10px}.pun-btn{height:44px;padding:0 18px;border:1px solid rgba(143,121,209,.45);border-radius:10px;background:linear-gradient(135deg,#514184,#806bc0);color:#fff;font:700 12px Oxanium;cursor:pointer}.pun-btn.secondary{background:#11151d;border-color:rgba(255,255,255,.1)}.pun-list{border:1px solid rgba(255,255,255,.09);border-radius:17px;overflow:hidden;background:rgba(10,13,18,.94)}.pun-item{display:grid;grid-template-columns:190px 1fr 160px 150px;gap:18px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.06);align-items:center}.pun-item:last-child{border-bottom:0}.pun-item.head{color:#69727f;font:700 10px Oxanium;text-transform:uppercase;letter-spacing:1px;background:rgba(255,255,255,.02)}.pun-nick{font:700 15px Oxanium;color:#e7e9ed}.pun-reason{color:#b5bbc5;font-size:13px;line-height:1.45}.pun-mod{color:#9e8dd4;font:600 12px Oxanium}.pun-date{color:#69727f;font-size:11px}.pun-empty{padding:45px 20px;text-align:center;color:#68717e}.modal-box{max-width:560px}.form-row{margin:14px 0}.form-row label{display:block;margin-bottom:7px;color:#aeb5c0;font:600 11px Oxanium;text-transform:uppercase;letter-spacing:1px}.form-row input,.form-row textarea{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:#080b10;color:#edf0f5;padding:12px;font:500 14px Rajdhani;outline:none}.form-row textarea{min-height:120px;resize:vertical}.form-error{color:#ff7777;font-size:12px;min-height:18px}@media(max-width:800px){.pun-item{grid-template-columns:1fr 1fr}.pun-item.head{display:none}.pun-reason{grid-column:1/-1}.pun-date{text-align:right}}@media(max-width:520px){.pun-page{width:calc(100% - 24px);padding-top:28px}.pun-head{padding:23px 18px}.pun-item{display:block}.pun-item>*{margin:5px 0}.pun-actions{display:block}.pun-btn{width:100%;margin-bottom:8px}}
 </style></head><body>
-<header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a><a class="active" href="punishments.html">Блокировки</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header>
+<header class="topbar">
+<a class="logo" href="index.html">EPM</a>
+<nav>
+<a href="index.html">Главная</a>
+<a href="server-info.html">⚔️ Сервер</a>
+<a href="forum.html">Форум</a>
+<a href="news.html">Новости</a>
+<a href="rules.html">Правила</a>
+<a href="donate.html">Донат</a>
+<a href="punishments.html" class="active">Блокировки</a>
+</nav>
+<div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div>
+</header>
 <main class="pun-page"><section class="pun-head"><div class="pun-kicker">Модерация EPM</div><h1>Блокировки</h1><p>История последних блокировок игроков: ник, причина, сотрудник и дата.</p><div class="pun-actions"><button class="pun-btn" id="addBtn" hidden>＋ Добавить блокировку</button><button class="pun-btn secondary" id="refreshBtn">↻ Обновить</button></div></section><section class="pun-list" id="list"><div class="pun-empty">Загрузка истории...</div></section></main><footer class="site-footer">EPM © 2026 · Minecraft Community</footer>
 <div class="modal" id="modal" hidden><div class="modal-box"><button class="modal-close" id="closeModal">×</button><h2>Добавить блокировку</h2><p class="modal-subtitle">Запись будет опубликована в истории.</p><form id="form"><div class="form-row"><label>Ник игрока</label><input id="nickname" maxlength="24" required></div><div class="form-row"><label>Причина</label><textarea id="reason" maxlength="500" required></textarea></div><div class="form-error" id="error"></div><button class="pun-btn" type="submit">Опубликовать</button></form></div></div>
 <script>
@@ -13,4 +25,5 @@ async function load(){try{const r=await fetch('/api/punishments'),d=await r.json
 async function access(){if(!token)return;try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}}),d=await r.json();if(r.ok&&roles.indexOf(d.user?.role)>=8)addBtn.hidden=false}catch{}}
 addBtn.onclick=()=>modal.hidden=false;document.getElementById('closeModal').onclick=()=>modal.hidden=true;modal.onclick=e=>{if(e.target===modal)modal.hidden=true};document.getElementById('refreshBtn').onclick=load;
 document.getElementById('form').onsubmit=async e=>{e.preventDefault();const er=document.getElementById('error');er.textContent='';try{const r=await fetch('/api/punishments',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({nickname:nickname.value,reason:reason.value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Ошибка');modal.hidden=true;e.target.reset();load()}catch(x){er.textContent=x.message}};load();access();
-</script></body></html>
+</script><script src="auth.js"></script>
+</body></html>
