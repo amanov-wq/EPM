@@ -8,6 +8,18 @@ const { pool, initDatabase } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
+const PUNISHMENT_API_KEYS = Object.freeze({
+  'Estamon Grief': process.env.EPM_GRIEF_API_KEY || '',
+  'Estamon Creative': process.env.EPM_CREATIVE_API_KEY || '',
+  'Estamon Survial': process.env.EPM_SURVIVAL_API_KEY || ''
+});
+const PUNISHMENT_MODES = Object.freeze(['Estamon Grief','Estamon Creative','Estamon Survial']);
+function punishmentApiKeyValid(mode, key) {
+  const expected = PUNISHMENT_API_KEYS[mode];
+  if (!expected || !key) return false;
+  const a=Buffer.from(String(key)); const b=Buffer.from(String(expected));
+  return a.length===b.length && crypto.timingSafeEqual(a,b);
+}
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
@@ -212,7 +224,7 @@ app.post('/api/profile/:id/messages',auth,async(req,res)=>{const profileUserId=N
 app.get('/api/punishments',async(req,res)=>{
   try{
     if(pool){
-      const result=await pool.query(`SELECT id,nickname,reason,moderator,created_at AS "createdAt" FROM punishment_history ORDER BY created_at DESC,id DESC LIMIT 100`);
+      const result=await pool.query(\`SELECT id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt" FROM punishment_history ORDER BY created_at DESC,id DESC LIMIT 100\`);
       return res.json({punishments:result.rows});
     }
     const file=path.join(DATA_DIR,'punishment_history.json');
@@ -222,28 +234,53 @@ app.get('/api/punishments',async(req,res)=>{
   }catch(error){console.error('Punishments load error:',error);res.status(500).json({error:'Ошибка загрузки истории блокировок'});}
 });
 
-app.post('/api/punishments',auth,async(req,res)=>{
-  if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Добавлять блокировки могут только Ст.Модератор и выше'});
+// Машинная интеграция: Minecraft-серверы отправляют бан сюда по API-ключу Render.
+app.post('/api/integrations/punishments',async(req,res)=>{
+  const mode=String(req.body.mode||'').trim();
+  const apiKey=String(req.get('X-EPM-API-Key')||'').trim();
+  if(!PUNISHMENT_MODES.includes(mode)||!punishmentApiKeyValid(mode,apiKey))return res.status(401).json({error:'Недействительный API-ключ интеграции'});
   const nickname=String(req.body.nickname||'').trim().slice(0,24);
-  const reason=String(req.body.reason||'').trim().slice(0,500);
-  if(!nickname||!reason)return res.status(400).json({error:'Укажи ник игрока и причину блокировки'});
+  const reason=String(req.body.reason||'Не указана').trim().slice(0,500)||'Не указана';
+  const moderator=String(req.body.moderator||'Неизвестно').trim().slice(0,64)||'Неизвестно';
+  const type=String(req.body.type||'BAN').trim().slice(0,24)||'BAN';
+  const server=String(req.body.server||mode).trim().slice(0,64)||mode;
+  const externalId=String(req.body.externalId||'').trim().slice(0,160);
+  const expiresAt=req.body.expiresAt ? new Date(req.body.expiresAt) : null;
+  if(!nickname)return res.status(400).json({error:'Не указан ник игрока'});
+  if(expiresAt && Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата окончания блокировки'});
   try{
-    const createdAt=new Date().toISOString();
     if(pool){
-      const result=await pool.query(
-        `INSERT INTO punishment_history(nickname,reason,moderator,created_at) VALUES($1,$2,$3,$4)
-         RETURNING id,nickname,reason,moderator,created_at AS "createdAt"`,
-        [nickname,reason,req.user.nickname,createdAt]
-      );
-      return res.status(201).json({punishment:result.rows[0]});
+      if(externalId){
+        const duplicate=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);
+        if(duplicate.rows[0])return res.json({ok:true,duplicate:true,id:duplicate.rows[0].id});
+      }
+      const result=await pool.query(\`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"\`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,type,server,externalId||null]);
+      return res.status(201).json({ok:true,punishment:result.rows[0]});
     }
     const file=path.join(DATA_DIR,'punishment_history.json');
     if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
     const punishments=readJsonFile(file);
-    const punishment={id:nextId(punishments),nickname,reason,moderator:req.user.nickname,createdAt};
-    punishments.push(punishment);
-    fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');
-    res.status(201).json({punishment});
+    if(externalId){const duplicate=punishments.find(p=>p.externalId===externalId);if(duplicate)return res.json({ok:true,duplicate:true,id:duplicate.id});}
+    const punishment={id:nextId(punishments),nickname,reason,moderator,expiresAt:expiresAt?expiresAt.toISOString():null,mode,type,server,externalId:externalId||null,createdAt:new Date().toISOString()};
+    punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');
+    res.status(201).json({ok:true,punishment});
+  }catch(error){console.error('Integration punishment error:',error);res.status(500).json({error:'Не удалось сохранить блокировку'});}
+});
+
+app.post('/api/punishments',auth,async(req,res)=>{
+  if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Добавлять блокировки могут только Ст.Модератор и выше'});
+  const nickname=String(req.body.nickname||'').trim().slice(0,24),reason=String(req.body.reason||'').trim().slice(0,500);
+  const mode=String(req.body.mode||'').trim().slice(0,64)||'EPM';
+  if(!nickname||!reason)return res.status(400).json({error:'Укажи ник игрока и причину блокировки'});
+  try{
+    const createdAt=new Date().toISOString();
+    if(pool){
+      const result=await pool.query(\`INSERT INTO punishment_history(nickname,reason,moderator,mode,punishment_type,server,created_at) VALUES($1,$2,$3,$4,'BAN',$4,$5) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"\`,[nickname,reason,req.user.nickname,mode,createdAt]);
+      return res.status(201).json({punishment:result.rows[0]});
+    }
+    const file=path.join(DATA_DIR,'punishment_history.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const punishments=readJsonFile(file),punishment={id:nextId(punishments),nickname,reason,moderator:req.user.nickname,expiresAt:null,mode,type:'BAN',server:mode,externalId:null,createdAt};
+    punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');res.status(201).json({punishment});
   }catch(error){console.error('Punishment create error:',error);res.status(500).json({error:'Не удалось добавить блокировку'});}
 });
 
