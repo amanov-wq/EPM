@@ -1,0 +1,9 @@
+# TEMPORARY TEST SERVER CONFIG
+# Delete this file after testing.
+api-url: "https://epmofficial.onrender.com"
+api-key: "PUT_TEST_KEY_HERE"
+mode: "TEST"
+commands:
+  - ban
+  - tempban
+send-delay-ticks: 20
