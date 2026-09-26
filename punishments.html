@@ -9,7 +9,7 @@
 @media(max-width:1050px){.pun-item{grid-template-columns:150px 1fr 130px 130px}.pun-item .pun-exp{display:none}}
 @media(max-width:800px){.pun-item{grid-template-columns:1fr 1fr}.pun-item.head{display:none}.pun-reason{grid-column:1/-1}.pun-date{text-align:right}}
 @media(max-width:520px){.pun-page{width:calc(100% - 24px);padding-top:28px}.pun-head{padding:23px 18px}.pun-item{display:block}.pun-item>*{margin:6px 0}.pun-actions{display:block}.pun-btn{width:100%;margin-bottom:8px}}
- .pun-search{margin-top:14px;display:flex;align-items:center;gap:10px;padding:0 14px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#080b10}.pun-search span{color:#8f79d1;font-size:22px}.pun-search input{width:100%;height:46px;border:0;outline:0;background:transparent;color:#edf0f5;font:500 14px Rajdhani}.tab.active{border-color:rgba(143,121,209,.75);box-shadow:0 0 18px rgba(143,121,209,.12)}.pun-unban{margin-top:8px;height:32px;padding:0 10px;border:1px solid rgba(106,203,145,.35);border-radius:7px;background:rgba(106,203,145,.08);color:#8ce0ad;font:700 10px Oxanium;cursor:pointer}.pun-status{display:inline-block;margin-top:6px;padding:4px 7px;border-radius:6px;background:rgba(106,203,145,.1);color:#8ce0ad;font:700 10px Oxanium;text-transform:uppercase}.pun-id{color:#555d68;font-size:10px;margin-left:5px}</style>
+ .pun-search{margin-top:14px;display:flex;align-items:center;gap:10px;padding:0 14px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#080b10}.pun-search span{color:#8f79d1;font-size:22px}.pun-search input{width:100%;height:46px;border:0;outline:0;background:transparent;color:#edf0f5;font:500 14px Rajdhani}.tab.active{border-color:rgba(143,121,209,.75);box-shadow:0 0 18px rgba(143,121,209,.12)}</style>
 </head>
 <body>
 <header class="topbar"><a class="logo" href="index.html">EPM</a><nav><a href="index.html">Главная</a><a href="server-info.html">⚔️ Сервер</a><a href="forum.html">Форум</a><a href="news.html">Новости</a><a href="rules.html">Правила</a><a href="donate.html">Донат</a><a href="punishments.html" class="active">Блокировки</a></nav><div class="account-links"><a href="login.html">Войти</a><a class="account-register" href="register.html">Регистрация</a></div></header>
@@ -35,7 +35,7 @@ const list=document.getElementById('list'),addBtn=document.getElementById('addBt
 const token=localStorage.getItem('epmToken')||'',roles=['Пользователь','Стример','Стажер','Мл.Хелпер','Хелпер','Ст.Хелпер','Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const fmt=v=>{if(!v)return '—';try{return new Date(v).toLocaleString('ru-RU',{dateStyle:'short',timeStyle:'short'})}catch{return v}};
-let bans=[],unbans=[],tab='bans',canUnban=false;
+let bans=[],unbans=[],tab='bans';
 function matches(p){
  const q=document.getElementById('search').value.trim().toLowerCase();
  if(!q)return true;
@@ -47,12 +47,11 @@ function render(){
  if(tab==='bans'){
    list.innerHTML='<div class="pun-item head"><div>Игрок</div><div>Причина</div><div>Модератор</div><div>Режим</div><div>Окончание</div></div>'+
    rows.map(p=>{
-     const unb=unbans.find(x=>Number(x.punishmentId)===Number(p.id));
-     return '<div class="pun-item"><div class="pun-nick">🔨 '+esc(p.nickname)+' <span class="pun-id">#'+esc(p.id)+'</span></div><div class="pun-reason">'+esc(p.reason)+'</div><div class="pun-mod">'+esc(p.moderator)+'</div><div><span class="pun-mode">'+esc(p.mode||p.server||'EPM')+'</span>'+(unb?'<div class="pun-status">Разблокирован</div>':'')+'</div><div class="pun-exp">'+esc(fmt(p.expiresAt))+'<br><small>'+esc(fmt(p.createdAt))+'</small>'+(canUnban&&!unb?'<br><button class="pun-unban" data-id="'+esc(p.id)+'">🔓 Разблокировать</button>':'')+'</div></div>'
+     return '<div class="pun-item"><div class="pun-nick">🔨 '+esc(p.nickname)+'</div><div class="pun-reason">'+esc(p.reason)+'</div><div class="pun-mod">'+esc(p.moderator)+'</div><div><span class="pun-mode">'+esc(p.mode||p.server||'EPM')+'</span></div><div class="pun-exp">'+esc(fmt(p.expiresAt))+'<br><small>'+esc(fmt(p.createdAt))+'</small></div></div>'
    }).join('');
  }else{
-   list.innerHTML='<div class="pun-item head"><div>Игрок</div><div>Причина разблокировки</div><div>Кто разбанил</div><div>Режим</div><div>Дата</div></div>'+
-   rows.map(p=>'<div class="pun-item"><div class="pun-nick">🔓 '+esc(p.nickname)+' <span class="pun-id">#'+esc(p.punishmentId)+'</span></div><div class="pun-reason">'+esc(p.reason)+'</div><div class="pun-mod">'+esc(p.moderator)+'</div><div><span class="pun-mode">'+esc(p.mode||p.server||'EPM')+'</span></div><div class="pun-date">'+esc(fmt(p.createdAt))+'</div></div>').join('');
+   list.innerHTML='<div class="pun-item head"><div>Игрок</div><div>Режим</div><div>Дата</div></div>'+
+   rows.map(p=>'<div class="pun-item"><div class="pun-nick">🔓 '+esc(p.nickname)+'</div><div class="pun-reason">'+esc(p.mode||p.server||'EPM')+'</div><div class="pun-date">'+esc(fmt(p.createdAt))+'</div></div>').join('');
  }
  document.querySelectorAll('.pun-unban').forEach(btn=>btn.onclick=()=>unban(btn.dataset.id));
 }
@@ -69,20 +68,8 @@ async function access(){
  try{
    const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}}),d=await r.json();
    const level=roles.indexOf(d.user?.role);
-   canUnban=level>=8;
    if(level>=8)addBtn.hidden=false;
-   render();
  }catch{}
-}
-async function unban(id){
- const reason=prompt('Причина разблокировки:','Разблокировка по решению команды');
- if(reason===null)return;
- try{
-   const r=await fetch('/api/punishments/'+encodeURIComponent(id)+'/unban',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({reason})});
-   const d=await r.json();if(!r.ok)throw Error(d.error||'Ошибка');
-   await load();
-   tab='unbans';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));render();
- }catch(e){alert(e.message)}
 }
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{tab=btn.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));render()});
 document.getElementById('search').oninput=render;
