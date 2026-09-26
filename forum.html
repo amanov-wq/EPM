@@ -40,16 +40,6 @@
 .forum-section-icon{width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:10px;background:rgba(128,107,192,.1);border:1px solid rgba(128,107,192,.12);font-size:18px}
 .forum-section-main{min-width:0;flex:1}.forum-section-main strong{display:block;color:#e1e4e9;font:600 14px Oxanium}.forum-section-main small{display:block;margin-top:3px;color:#68717e;font-size:11px}
 .forum-section-arrow{color:#555e6b;font-size:18px}
-.forum-latest{margin-top:12px;border:1px solid rgba(255,255,255,.09);border-radius:17px;overflow:hidden;background:linear-gradient(145deg,rgba(16,20,28,.96),rgba(8,11,16,.96))}
-.forum-latest-head{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.07)}
-.forum-latest-head h2{margin:0;font:700 18px Oxanium}.forum-latest-head span{color:#626c78;font:600 10px Oxanium}
-.forum-topic-new{display:flex;align-items:center;gap:14px;padding:17px 20px;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.055);transition:.18s}
-.forum-topic-new:last-child{border-bottom:0}.forum-topic-new:hover{background:rgba(128,107,192,.07)}
-.forum-topic-avatar{width:42px;height:42px;flex:none;overflow:hidden;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,#28213c,#11141b);border:1px solid rgba(139,119,205,.22);color:#cfc4ef;font:700 12px Oxanium}
-.forum-topic-avatar img{width:100%;height:100%;object-fit:cover}
-.forum-topic-main-new{min-width:0;flex:1}.forum-topic-main-new strong{display:block;color:#e2e5ea;font:600 14px Oxanium;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.forum-topic-main-new small{display:block;margin-top:5px;color:#69727f;font-size:11px}
-.forum-topic-counts{display:flex;gap:18px;text-align:center;flex:none}.forum-topic-counts b{display:block;color:#d8dce3;font:700 13px Oxanium}.forum-topic-counts span{display:block;color:#626b78;font-size:9px}
-.forum-empty-new{padding:48px 20px;text-align:center;color:#707986}.forum-empty-new strong{display:block;color:#aab0b9;font:600 14px Oxanium;margin-bottom:6px}
 .modal-box{border-color:rgba(143,121,209,.2)}
 .forum-select-group{margin-top:17px}.forum-select-group label{display:block;margin-bottom:7px;color:#aeb5c0;font:600 11px Oxanium;letter-spacing:1px;text-transform:uppercase}
 .forum-select-group select{width:100%;height:46px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:#080b10;color:#edf0f5;padding:0 12px;font:500 14px Rajdhani;outline:none}
@@ -97,24 +87,8 @@
 </div>
 </section>
 
-<section class="forum-latest">
-<div class="forum-latest-head"><h2 id="listTitle">Последние темы</h2><span>АКТИВНОСТЬ EPM</span></div>
-<div id="topics"><div class="forum-empty-new"><strong>Загрузка форума...</strong><span>Получаем последние темы</span></div></div>
-</section>
 </main>
 <footer class="site-footer">EPM © 2026 · Minecraft Community</footer>
 
-<div class="modal" id="modal"><div class="modal-box">
-<div id="guestGate"><div class="eyebrow">ДОСТУП К ФУНКЦИИ</div><h2>Вы гость</h2><p>Чтобы создавать темы, войдите или зарегистрируйтесь.</p><div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Регистрация</a></div></div>
-<form id="topicForm" style="display:none"><div class="eyebrow">EPM COMMUNITY</div><h2>Новая тема</h2>
-<label for="title">Заголовок</label><input id="title" required maxlength="100" placeholder="Введите заголовок темы">
-<div class="forum-select-group"><label for="category">Раздел</label><select id="category">
-<option value="Помощь">🆘 Помощь</option><option value="Баг-репорты">🐞 Баг-репорты</option><option value="База знаний">📚 База знаний</option><option value="Новости проекта">📢 Новости проекта</option><option value="Предложения по улучшению">💡 Предложения по улучшению</option><option value="Команда проекта">👥 Команда проекта</option><option value="Информация о сервере">📜 Информация о сервере</option><option value="Жалобы на игроков">⚠️ Жалобы на игроков</option><option value="Жалобы на команду">🛡️ Жалобы на команду</option><option value="История Наказаний">🔨 История Наказаний</option><option value="Blood Shed World">🩸 Blood Shed World</option><option value="EPM Grief">⛏️ EPM Grief</option><option value="EPM Survival">🌲 EPM Survival</option><option value="EPM Creative">🏗️ EPM Creative</option>
-</select></div>
-<label for="content">Текст</label><textarea id="content" required maxlength="5000" placeholder="Подробно опишите свою тему..."></textarea>
-<div class="modal-actions"><button type="button" class="auth-btn secondary" id="cancel">Отмена</button><button class="auth-btn primary">Создать тему</button></div></form>
-<button type="button" class="modal-close" id="closeGuest">Закрыть</button>
-</div></div>
-<script src="auth.js"></script><script src="forum.js"></script>
 </body>
 </html>
