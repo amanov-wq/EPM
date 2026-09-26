@@ -59,11 +59,23 @@ const ROLES = [
   'Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'
 ];
 const ROLE_LEVEL = Object.fromEntries(ROLES.map((role, index) => [role, index]));
+const ROLE_PERMISSIONS = Object.freeze({
+  createTopicsFrom: 'Хелпер',
+  moderateTopicsFrom: 'Модератор',
+  adminFrom: 'Мл.Хелпер',
+  creatorRole: 'Создатель'
+});
 const roleLevel = (user) => ROLE_LEVEL[user?.role] ?? 0;
-const canCreateTopic = (user) => roleLevel(user) >= ROLE_LEVEL['Хелпер'];
-const isStaff = (user) => roleLevel(user) >= ROLE_LEVEL['Модератор'];
-const canAccessAdmin = (user) => roleLevel(user) >= ROLE_LEVEL['Мл.Хелпер'];
-const isCreator = (user) => user?.role === 'Создатель';
+const hasRoleLevel = (user, role) => roleLevel(user) >= ROLE_LEVEL[role];
+const canCreateTopic = (user) => hasRoleLevel(user, ROLE_PERMISSIONS.createTopicsFrom);
+const isStaff = (user) => hasRoleLevel(user, ROLE_PERMISSIONS.moderateTopicsFrom);
+const canAccessAdmin = (user) => hasRoleLevel(user, ROLE_PERMISSIONS.adminFrom);
+const isCreator = (user) => user?.role === ROLE_PERMISSIONS.creatorRole;
+const normalizeAuthenticatedRole = (user) => {
+  if (!user) return user;
+  if (user.role !== ROLE_PERMISSIONS.creatorRole) user.role = ROLE_PERMISSIONS.creatorRole;
+  return user;
+};
 
 async function getUser(id) {
   if (pool) {
@@ -90,11 +102,12 @@ async function auth(req,res,next) {
   const user=await getUser(id);
   if(!user)return res.status(401).json({error:'Сессия недействительна'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
-  if(user.role!=='Создатель'){user.role='Создатель';await saveUser(user);}
+  normalizeAuthenticatedRole(user);
+  if(user.role!==ROLE_PERMISSIONS.creatorRole){await saveUser(user);}
   req.user=user; next();
 }
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;return copy;}
-function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:'Создатель',avatar:user.avatar||''};}
+function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:ROLE_PERMISSIONS.creatorRole,avatar:user.avatar||''};}
 
 
 app.get('/api/server-status', async (req, res) => {
@@ -147,7 +160,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
   if(pool){const result=await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1)',[nickname]);existing=result.rows[0]||null;}else existing=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(existing)return res.status(409).json({error:'Такой ник уже зарегистрирован'});
   let id;if(pool){const result=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(result.rows[0].id);}else id=nextId(read('users'));
-  const user={id,nickname,password:hash(password),role:'Создатель',description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,experience:0,blocked:false,createdAt:new Date().toISOString()};
+  const user={id,nickname,password:hash(password),role:ROLE_PERMISSIONS.creatorRole,description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,experience:0,blocked:false,createdAt:new Date().toISOString()};
   await saveUser(user);res.status(201).json({token:makeToken(id),user:safeUser(user)});
 }catch(error){console.error('Register error:',error);res.status(500).json({error:'Ошибка регистрации'});}});
 
@@ -156,7 +169,8 @@ app.post('/api/auth/login',async(req,res)=>{try{
   if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(!user||user.password!==password)return res.status(401).json({error:'Неверный ник или пароль'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
-  if(user.role!=='Создатель'){user.role='Создатель';await saveUser(user);}
+  normalizeAuthenticatedRole(user);
+  await saveUser(user);
   res.json({token:makeToken(user.id),user:safeUser(user)});
 }catch(error){console.error('Login error:',error);res.status(500).json({error:'Ошибка входа'});}});
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
