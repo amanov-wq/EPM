@@ -224,7 +224,7 @@ app.post('/api/profile/:id/messages',auth,async(req,res)=>{const profileUserId=N
 app.get('/api/punishments',async(req,res)=>{
   try{
     if(pool){
-      const result=await pool.query(\`SELECT id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt" FROM punishment_history ORDER BY created_at DESC,id DESC LIMIT 100\`);
+      const result=await pool.query(`SELECT id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt" FROM punishment_history ORDER BY created_at DESC,id DESC LIMIT 100`);
       return res.json({punishments:result.rows});
     }
     const file=path.join(DATA_DIR,'punishment_history.json');
@@ -254,7 +254,7 @@ app.post('/api/integrations/punishments',async(req,res)=>{
         const duplicate=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);
         if(duplicate.rows[0])return res.json({ok:true,duplicate:true,id:duplicate.rows[0].id});
       }
-      const result=await pool.query(\`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"\`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,type,server,externalId||null]);
+      const result=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,type,server,externalId||null]);
       return res.status(201).json({ok:true,punishment:result.rows[0]});
     }
     const file=path.join(DATA_DIR,'punishment_history.json');
@@ -275,7 +275,7 @@ app.post('/api/punishments',auth,async(req,res)=>{
   try{
     const createdAt=new Date().toISOString();
     if(pool){
-      const result=await pool.query(\`INSERT INTO punishment_history(nickname,reason,moderator,mode,punishment_type,server,created_at) VALUES($1,$2,$3,$4,'BAN',$4,$5) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"\`,[nickname,reason,req.user.nickname,mode,createdAt]);
+      const result=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,mode,punishment_type,server,created_at) VALUES($1,$2,$3,$4,'BAN',$4,$5) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,req.user.nickname,mode,createdAt]);
       return res.status(201).json({punishment:result.rows[0]});
     }
     const file=path.join(DATA_DIR,'punishment_history.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
@@ -291,3 +291,7 @@ app.use(express.static(__dirname));
 app.use((err,req,res,next)=>{console.error('EPM API error:',err);if(res.headersSent)return next(err);res.status(500).json({error:'Внутренняя ошибка сервера'});});
 
 (async()=>{try{await initDatabase();app.listen(PORT,()=>console.log(`EPM server started on port ${PORT}`));}catch(error){console.error('Database initialization error:',error);process.exit(1);}})();
+
+
+
+
