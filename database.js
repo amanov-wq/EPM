@@ -58,6 +58,14 @@ async function initDatabase() {
       content TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS punishment_history (
+      id SERIAL PRIMARY KEY,
+      nickname TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      moderator TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   return true;
