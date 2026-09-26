@@ -1,0 +1,22 @@
+name: Build EPM Punishment Bridge
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'minecraft-plugin/EPMPunishmentBridge/**'
+      - '.github/workflows/build-epm-punishment-bridge.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn -B clean package -f minecraft-plugin/EPMPunishmentBridge/pom.xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: epm-punishment-bridge
+          path: minecraft-plugin/EPMPunishmentBridge/target/epm-punishment-bridge-1.0.0.jar
