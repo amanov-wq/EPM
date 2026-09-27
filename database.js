@@ -59,6 +59,34 @@ async function initDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS news (
+      id SERIAL PRIMARY KEY,
+      category TEXT NOT NULL DEFAULT 'community',
+      title TEXT NOT NULL,
+      text TEXT NOT NULL,
+      date TEXT NOT NULL,
+      link TEXT DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      nickname TEXT NOT NULL,
+      rating INTEGER NOT NULL DEFAULT 5,
+      text TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS purchases (
+      id SERIAL PRIMARY KEY,
+      nickname TEXT NOT NULL,
+      product TEXT NOT NULL,
+      amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS punishment_history (
       id SERIAL PRIMARY KEY,
       nickname TEXT NOT NULL,
@@ -154,6 +182,28 @@ async function replaceFromJson(name, rows) {
         `SELECT setval(pg_get_serial_sequence('users','id'),
           COALESCE((SELECT MAX(id) FROM users),1), true)`
       );
+    } else if (name === 'news') {
+      if (ids.length) await client.query(`DELETE FROM news WHERE id <> ALL($1::int[])`, [ids]);
+      else await client.query('DELETE FROM news');
+      for (const item of rows) {
+        await client.query(`INSERT INTO news(id,category,title,text,date,link,created_at,updated_at)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$7)
+          ON CONFLICT (id) DO UPDATE SET category=EXCLUDED.category,title=EXCLUDED.title,text=EXCLUDED.text,date=EXCLUDED.date,link=EXCLUDED.link,updated_at=EXCLUDED.updated_at`,
+          [item.id,item.category||'community',item.title||'',item.text||'',item.date||new Date().toLocaleDateString('ru-RU'),item.link||'',item.createdAt||new Date()]);
+      }
+      await client.query(`SELECT setval(pg_get_serial_sequence('news','id'),COALESCE((SELECT MAX(id) FROM news),1),true)`);
+    } else if (name === 'reviews') {
+      if (ids.length) await client.query(`DELETE FROM reviews WHERE id <> ALL($1::int[])`, [ids]); else await client.query('DELETE FROM reviews');
+      for (const item of rows) await client.query(`INSERT INTO reviews(id,nickname,rating,text,created_at) VALUES($1,$2,$3,$4,$5)
+        ON CONFLICT(id) DO UPDATE SET nickname=EXCLUDED.nickname,rating=EXCLUDED.rating,text=EXCLUDED.text`,
+        [item.id,item.nickname||item.author||'Игрок',Math.min(5,Math.max(1,Number(item.rating)||5)),item.text||item.content||'',item.createdAt||new Date()]);
+      await client.query(`SELECT setval(pg_get_serial_sequence('reviews','id'),COALESCE((SELECT MAX(id) FROM reviews),1),true)`);
+    } else if (name === 'purchases') {
+      if (ids.length) await client.query(`DELETE FROM purchases WHERE id <> ALL($1::int[])`, [ids]); else await client.query('DELETE FROM purchases');
+      for (const item of rows) await client.query(`INSERT INTO purchases(id,nickname,product,amount,status,created_at) VALUES($1,$2,$3,$4,$5,$6)
+        ON CONFLICT(id) DO UPDATE SET nickname=EXCLUDED.nickname,product=EXCLUDED.product,amount=EXCLUDED.amount,status=EXCLUDED.status`,
+        [item.id,item.nickname||item.author||'Игрок',item.product||item.item||'Не указано',Number(item.amount||item.price||0),item.status||'pending',item.createdAt||new Date()]);
+      await client.query(`SELECT setval(pg_get_serial_sequence('purchases','id'),COALESCE((SELECT MAX(id) FROM purchases),1),true)`);
     } else if (name === 'topics') {
       if (ids.length) {
         await client.query(`DELETE FROM topics WHERE id <> ALL($1::int[])`, [ids]);
@@ -249,6 +299,19 @@ async function loadToJson(name) {
     const { rows } = await pool.query(
       'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users ORDER BY id'
     );
+    return rows;
+  }
+
+  if (name === 'news') {
+    const { rows } = await pool.query('SELECT id,category,title,text,date,link,created_at AS "createdAt",updated_at AS "updatedAt" FROM news ORDER BY id');
+    return rows;
+  }
+  if (name === 'reviews') {
+    const { rows } = await pool.query('SELECT id,nickname,rating,text,created_at AS "createdAt" FROM reviews ORDER BY id');
+    return rows;
+  }
+  if (name === 'purchases') {
+    const { rows } = await pool.query('SELECT id,nickname,product,amount,status,created_at AS "createdAt" FROM purchases ORDER BY id');
     return rows;
   }
 
