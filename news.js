@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!grid) return;
 
   try {
-    const response = await fetch('data/news.json', { cache: 'no-store' });
+    const response = await fetch('/api/news', { cache: 'no-store' });
     if (!response.ok) throw new Error('news unavailable');
     const news = await response.json();
 
