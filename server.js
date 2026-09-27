@@ -128,10 +128,26 @@ app.get('/api/server-status', async (req, res) => {
   const port = 25565;
   try {
     const address = encodeURIComponent(`${host}:${port}`);
-    const response = await fetch(`https://api.mcstatus.io/v2/status/java/${address}?query=false&timeout=5`, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(7000)
-    });
+    const [javaResponse, bedrockResponse] = await Promise.all([
+      fetch(`https://api.mcstatus.io/v2/status/java/${address}?query=false&timeout=5`, {headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)}),
+      fetch(`https://api.mcstatus.io/v2/status/bedrock/${address}?query=false&timeout=5`, {headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)})
+    ]);
+    const javaRaw=await javaResponse.text(), bedrockRaw=await bedrockResponse.text();
+    let java={},bedrock={}; try{java=JSON.parse(javaRaw)}catch{} try{bedrock=JSON.parse(bedrockRaw)}catch{}
+    if(!javaResponse.ok && !bedrockResponse.ok) throw new Error('Сервер недоступен');
+    res.json({
+      host,port,
+      online:Boolean(java.online||bedrock.online),
+      java:{online:Boolean(java.online),version:java.version?.name_clean||java.version?.name_raw||null,protocol:java.version?.protocol||null,players:Number(java.players?.online??0),maxPlayers:Number(java.players?.max??0)},
+      bedrock:{online:Boolean(bedrock.online),version:bedrock.version?.name_clean||bedrock.version?.name_raw||null,players:Number(bedrock.players?.online??0),maxPlayers:Number(bedrock.players?.max??0)},
+      version:java.version?.name_clean||java.version?.name_raw||bedrock.version?.name_clean||bedrock.version?.name_raw||null,
+      protocol:java.version?.protocol||bedrock.version?.protocol||null,
+      players:Number(java.players?.online??bedrock.players?.online??0),
+      maxPlayers:Number(java.players?.max??bedrock.players?.max??0),
+      motd:java.motd?.clean||bedrock.motd?.clean||'',
+      gamemode:java.gamemode||bedrock.gamemode||'Survival',
+      checkedAt:new Date().toISOString()
+    });;
     const raw = await response.text();
     let data = {};
     try { data = JSON.parse(raw); } catch {}
