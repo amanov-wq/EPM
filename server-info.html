@@ -73,15 +73,16 @@ async function loadServerStatus(){
     status.classList.toggle('offline',!data.online);
     status.querySelector('span').textContent=data.online?'Онлайн':'Оффлайн';
 
-    javaBadge.textContent=data.online?'Онлайн':'Оффлайн';
-    javaInfo.textContent=data.online
-      ? 'Сервер доступен · '+(data.version||'Версия определяется автоматически')+' · '+Number(data.players||0)+' / '+Number(data.maxPlayers||0)+' игроков'
+    const java=data.java||{online:Boolean(data.online),version:data.version,players:data.players,maxPlayers:data.maxPlayers};
+    const bedrock=data.bedrock||{online:false};
+    javaBadge.textContent=java.online?'Онлайн':'Оффлайн';
+    javaInfo.textContent=java.online
+      ? 'Сервер доступен · '+(java.version||'Версия определяется автоматически')+' · '+Number(java.players||0)+' / '+Number(java.maxPlayers||0)+' игроков'
       : 'Java-сервер сейчас недоступен.';
-
-    bedrockBadge.textContent=data.online?'Доступен':'Недоступен';
-    bedrockInfo.textContent=data.online
-      ? 'Подключение через поддерживаемую сеть сервера. Порт Java: '+Number(data.port||25565)+'.'
-      : 'Проверка Bedrock недоступна, пока основной сервер оффлайн.';
+    bedrockBadge.textContent=bedrock.online?'Онлайн':'Оффлайн';
+    bedrockInfo.textContent=bedrock.online
+      ? 'Bedrock-соединение доступно · '+(bedrock.version||'Версия определяется автоматически')+' · '+Number(bedrock.players||0)+' / '+Number(bedrock.maxPlayers||0)+' игроков'
+      : 'Bedrock-соединение на указанном адресе/порту не отвечает.';
 
     updated.textContent='Последняя проверка: '+new Date(data.checkedAt||Date.now()).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   }catch(e){
