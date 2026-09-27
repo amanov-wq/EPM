@@ -297,7 +297,89 @@ app.post('/api/punishments',auth,async(req,res)=>{
   }catch(error){console.error('Punishment create error:',error);res.status(500).json({error:'Не удалось добавить блокировку'});}
 });
 
-app.get('/api/news',(req,res)=>{const newsFile=path.join(DATA_DIR,'news.json');if(!fs.existsSync(newsFile))fs.writeFileSync(newsFile,'[]','utf8');res.json(readJsonFile(newsFile));});
+app.get('/api/news',async(req,res)=>{
+  try{
+    if(pool){
+      const result=await pool.query(`SELECT id,category,title,text,date,link,created_at AS "createdAt",updated_at AS "updatedAt" FROM news ORDER BY created_at DESC,id DESC`);
+      return res.json(result.rows);
+    }
+    const newsFile=path.join(DATA_DIR,'news.json');
+    if(!fs.existsSync(newsFile))fs.writeFileSync(newsFile,'[]','utf8');
+    return res.json(readJsonFile(newsFile));
+  }catch(error){console.error('News load error:',error);res.status(500).json({error:'Ошибка загрузки новостей'});}
+});
+
+app.post('/api/admin/news',auth,async(req,res)=>{
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  const category=String(req.body.category||'community').trim().slice(0,32)||'community';
+  const title=String(req.body.title||'').trim().slice(0,160);
+  const text=String(req.body.text||'').trim().slice(0,3000);
+  const date=String(req.body.date||new Date().toLocaleDateString('ru-RU')).trim().slice(0,32);
+  const link=String(req.body.link||'').trim().slice(0,160);
+  if(!title||!text)return res.status(400).json({error:'Укажи заголовок и текст новости'});
+  try{
+    if(pool){
+      const result=await pool.query(`INSERT INTO news(category,title,text,date,link) VALUES($1,$2,$3,$4,$5)
+        RETURNING id,category,title,text,date,link,created_at AS "createdAt",updated_at AS "updatedAt"`,[category,title,text,date,link]);
+      return res.status(201).json({news:result.rows[0]});
+    }
+    const file=path.join(DATA_DIR,'news.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const rows=readJsonFile(file),item={id:nextId(rows),category,title,text,date,link,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    rows.unshift(item);fs.writeFileSync(file,JSON.stringify(rows,null,2),'utf8');res.status(201).json({news:item});
+  }catch(error){console.error('News create error:',error);res.status(500).json({error:'Не удалось создать новость'});}
+});
+
+app.patch('/api/admin/news/:id',auth,async(req,res)=>{
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Некорректная новость'});
+  const category=String(req.body.category||'community').trim().slice(0,32)||'community';
+  const title=String(req.body.title||'').trim().slice(0,160);
+  const text=String(req.body.text||'').trim().slice(0,3000);
+  const date=String(req.body.date||new Date().toLocaleDateString('ru-RU')).trim().slice(0,32);
+  const link=String(req.body.link||'').trim().slice(0,160);
+  if(!title||!text)return res.status(400).json({error:'Укажи заголовок и текст новости'});
+  try{
+    if(pool){
+      const result=await pool.query(`UPDATE news SET category=$2,title=$3,text=$4,date=$5,link=$6,updated_at=NOW() WHERE id=$1
+        RETURNING id,category,title,text,date,link,created_at AS "createdAt",updated_at AS "updatedAt"`,[id,category,title,text,date,link]);
+      if(!result.rows[0])return res.status(404).json({error:'Новость не найдена'});
+      return res.json({news:result.rows[0]});
+    }
+    const file=path.join(DATA_DIR,'news.json'),rows=readJsonFile(file),i=rows.findIndex(x=>Number(x.id)===id);
+    if(i<0)return res.status(404).json({error:'Новость не найдена'});
+    rows[i]={...rows[i],category,title,text,date,link,updatedAt:new Date().toISOString()};fs.writeFileSync(file,JSON.stringify(rows,null,2),'utf8');res.json({news:rows[i]});
+  }catch(error){console.error('News update error:',error);res.status(500).json({error:'Не удалось обновить новость'});}
+});
+
+app.delete('/api/admin/news/:id',auth,async(req,res)=>{
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Некорректная новость'});
+  try{
+    if(pool){
+      const result=await pool.query('DELETE FROM news WHERE id=$1 RETURNING id',[id]);
+      if(!result.rows[0])return res.status(404).json({error:'Новость не найдена'});
+      return res.json({ok:true});
+    }
+    const file=path.join(DATA_DIR,'news.json'),rows=readJsonFile(file),next=rows.filter(x=>Number(x.id)!==id);
+    if(next.length===rows.length)return res.status(404).json({error:'Новость не найдена'});
+    fs.writeFileSync(file,JSON.stringify(next,null,2),'utf8');res.json({ok:true});
+  }catch(error){console.error('News delete error:',error);res.status(500).json({error:'Не удалось удалить новость'});}
+});
+
+app.get('/api/reviews',async(req,res)=>{
+  try{
+    if(pool)return res.json({reviews:(await pool.query('SELECT id,nickname,rating,text,created_at AS "createdAt" FROM reviews ORDER BY created_at DESC,id DESC LIMIT 200')).rows});
+    const file=path.join(DATA_DIR,'reviews.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');return res.json({reviews:readJsonFile(file)});
+  }catch(error){res.status(500).json({error:'Ошибка загрузки отзывов'});}
+});
+
+app.get('/api/purchases',auth,async(req,res)=>{
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  try{
+    if(pool)return res.json({purchases:(await pool.query('SELECT id,nickname,product,amount,status,created_at AS "createdAt" FROM purchases ORDER BY created_at DESC,id DESC LIMIT 500')).rows});
+    const file=path.join(DATA_DIR,'purchases.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');return res.json({purchases:readJsonFile(file)});
+  }catch(error){res.status(500).json({error:'Ошибка загрузки покупок'});}
+});
 function readJsonFile(file){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return [];}}
 
 app.use(express.static(__dirname));
