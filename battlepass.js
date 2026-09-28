@@ -41,6 +41,5 @@ function render(){const lv=level(),within=lv===30?1000:state.xp%1000;document.ge
 function claim(lv){const r=rewards.find(x=>x.level===lv);if(!r||level()<lv||state.claimed.includes(lv))return;if(r.money)state.balance+=r.money;state.claimed.push(lv);save();render();toast(r.donate?'Награда отмечена. Для выдачи привилегии обратись к администрации.':'Награда получена!')}
 document.getElementById('addXp').onclick=()=>{if(level()>=30){toast('У тебя максимальный уровень!');return}state.xp=Math.min(29000,state.xp+250);save();render();toast('+250 XP добавлено (демо)')};
 document.getElementById('claimAll').onclick=()=>{let count=0;rewards.filter(r=>r.level<=level()&&!state.claimed.includes(r.level)).forEach(r=>{if(r.money)state.balance+=r.money;state.claimed.push(r.level);count++});save();render();toast(count?'Получено наград: '+count:'Пока нет новых наград')};
-document.getElementById('resetPass').onclick=()=>{if(!confirm('Сбросить уровень, валюту и полученные награды?'))return;state={xp:0,balance:10000,claimed:[]};save();render();toast('Прогресс сброшен')};
 render();
 })();
