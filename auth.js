@@ -1,4 +1,4 @@
-const STANDARD_NAV=[['index.html','Главная'],['server-info.html','⚔️ Сервер'],['forum.html','Форум'],['news.html','Новости'],['rules.html','Правила'],['donate.html','Донат'],['punishments.html','Блокировки']];
+const STANDARD_NAV=[['index.html','Главная'],['server-info.html','⚔️ Сервер'],['forum.html','Форум'],['news.html','Новости'],['rules.html','Правила'],['donate.html','Донат'],['punishments.html','Блокировки'],['battlepass.html','🎟️ Battle Pass']];
 function syncSiteNav(){const nav=document.querySelector('.topbar nav');if(!nav)return;const current=location.pathname.split('/').pop()||'index.html';nav.innerHTML=STANDARD_NAV.map(([href,label])=>'<a href="'+href+'"'+(current===href?' class="active"':'')+'>'+label+'</a>').join('')}
 const TOKEN_KEY='epmToken',USER_KEY='epmUser';
 function getToken(){return localStorage.getItem(TOKEN_KEY)||''}
