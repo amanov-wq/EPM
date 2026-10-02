@@ -193,7 +193,7 @@
 </header>
 
 <main class="profile-page">
-  <section id="guest" class="profile-hero guest-profile">
+  <section id="guest" class="profile-hero guest-profile" hidden>
     <div class="guest-icon">EP</div>
     <span class="hero-tag">EPM ACCOUNT</span>
     <h1>Вы гость</h1>
@@ -216,7 +216,7 @@
       <div class="profile-main">
         <span class="hero-tag">EPM PROFILE</span>
         <h1 id="nickname">—</h1>
-        <span class="profile-role" id="role">Создатель</span>
+        <span class="profile-role" id="role">Пользователь</span>
         <div class="profile-id" id="profileId">ID —</div>
         <p class="profile-description" id="description">Новый участник EPM</p>
         <div class="profile-stats">
@@ -228,7 +228,7 @@
 
       <div class="profile-actions">
         <button class="profile-action" id="settingsButton" type="button">⚙ Настройки</button>
-        <a class="profile-action profile-admin" id="adminButton" href="admin.html">🛡 Админка</a>
+        <a class="profile-action profile-admin" id="adminButton" href="admin.html" hidden>🛡 Админка</a>
         <button class="profile-action profile-danger" id="logout" type="button">🚪 Выйти</button>
       </div>
     </div>
@@ -239,7 +239,7 @@
         <h2>Информация аккаунта</h2>
         <div class="profile-info-grid" style="margin-top:18px">
           <div class="profile-info"><span>Никнейм</span><b id="infoNickname">—</b></div>
-          <div class="profile-info"><span>Роль</span><b id="infoRole">Создатель</b></div>
+          <div class="profile-info"><span>Роль</span><b id="infoRole">Пользователь</b></div>
           <div class="profile-info"><span>Дата регистрации</span><b id="infoCreated">—</b></div>
           <div class="profile-info"><span>Статус</span><b id="infoStatus">Активен</b></div>
         </div>
@@ -310,18 +310,21 @@
 
     const name=current.nickname||'EPM';
     document.getElementById('nickname').textContent=name;
-    document.getElementById('role').textContent='Создатель';
+    document.getElementById('role').textContent=current.role||'Пользователь';
     document.getElementById('profileId').textContent='ID '+Number(current.id||0);
     document.getElementById('description').textContent=current.description||'Новый участник EPM';
     document.getElementById('messages').textContent=Number(current.posts||0);
     document.getElementById('topics').textContent=Number(current.topics||0);
     document.getElementById('experience').textContent=Number(current.experience||0)+' XP';
     document.getElementById('infoNickname').textContent=name;
-    document.getElementById('infoRole').textContent='Создатель';
+    document.getElementById('infoRole').textContent=current.role||'Пользователь';
     document.getElementById('infoCreated').textContent=date(current.createdAt);
     document.getElementById('infoStatus').textContent=current.blocked?'Заблокирован':'Активен';
     document.getElementById('descriptionInput').value=current.description||'';
     setAvatar(current.avatar||'',name);
+    const adminButton=document.getElementById('adminButton');
+    const adminRoles=['Мл.Хелпер','Хелпер','Ст.Хелпер','Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'];
+    adminButton.hidden=!adminRoles.includes(current.role);
   }
 
   async function api(url,options={}){
