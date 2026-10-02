@@ -151,7 +151,7 @@ async function replaceFromJson(name, rows) {
         await client.query(
           `INSERT INTO users
             (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id,google_email,created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
            ON CONFLICT (id) DO UPDATE SET
              nickname=EXCLUDED.nickname,
              password=EXCLUDED.password,
@@ -176,6 +176,8 @@ async function replaceFromJson(name, rows) {
             u.level || 1,
             u.experience || 0,
             !!u.blocked,
+            u.googleId || null,
+            u.googleEmail || null,
             u.createdAt || new Date()
           ]
         );
@@ -300,7 +302,7 @@ async function loadToJson(name) {
 
   if (name === 'users') {
     const { rows } = await pool.query(
-      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users ORDER BY id'
+      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users ORDER BY id'
     );
     return rows;
   }
