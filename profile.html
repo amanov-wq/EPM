@@ -333,7 +333,7 @@
     if(t)headers.Authorization='Bearer '+t;
     const response=await fetch(url,{...options,headers,cache:'no-store'});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Ошибка запроса');
+    if(!response.ok){const error=new Error(data.error||'Ошибка запроса');error.status=response.status;throw error;}
     return data;
   }
 
@@ -351,14 +351,17 @@
     show(data.user);
     saveLocal(data.user);
   }catch(error){
-    if(cached){
+    if(error.status===401||error.status===403){
+      localStorage.removeItem('epmToken');
+      localStorage.removeItem('epmUser');
+      localStorage.removeItem('user');
+      guest.hidden=false;
+      userBox.hidden=true;
+    }else if(cached){
       show(cached);
     }else{
       guest.hidden=false;
       userBox.hidden=true;
-      localStorage.removeItem('epmToken');
-      localStorage.removeItem('epmUser');
-      localStorage.removeItem('user');
     }
   }
 
