@@ -163,6 +163,8 @@ async function replaceFromJson(name, rows) {
              level=EXCLUDED.level,
              experience=EXCLUDED.experience,
              blocked=EXCLUDED.blocked,
+             google_id=EXCLUDED.google_id,
+             google_email=EXCLUDED.google_email,
              created_at=EXCLUDED.created_at`,
           [
             u.id,
