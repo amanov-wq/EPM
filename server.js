@@ -215,6 +215,22 @@ app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
   if(typeof req.body.blocked!=='boolean')return res.status(400).json({error:'Статус блокировки должен быть true или false'});
   try{const user=await getUser(userId);if(!user)return res.status(404).json({error:'Пользователь не найден'});if(user.role==='Создатель')return res.status(403).json({error:'Аккаунт Создателя нельзя заблокировать'});user.blocked=req.body.blocked;await saveUser(user);res.json({user:safeUser(user)});}catch(error){console.error('Admin status error:',error);res.status(500).json({error:'Не удалось изменить статус пользователя'});}
 });
+app.patch('/api/admin/users/:id/role',auth,async(req,res)=>{
+  if(!isCreator(req.user))return res.status(403).json({error:'Изменять роли может только Создатель'});
+  const userId=Number(req.params.id);
+  const role=String(req.body.role||'').trim();
+  if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
+  if(!ROLES.includes(role))return res.status(400).json({error:'Недопустимая роль'});
+  if(userId===Number(req.user.id))return res.status(400).json({error:'Нельзя изменить собственную роль'});
+  try{
+    const user=await getUser(userId);
+    if(!user)return res.status(404).json({error:'Пользователь не найден'});
+    user.role=role;
+    await saveUser(user);
+    res.json({user:safeUser(user)});
+  }catch(error){console.error('Admin role error:',error);res.status(500).json({error:'Не удалось изменить роль пользователя'});}
+});
+
 app.get('/api/topics',async(req,res)=>{try{const topics=pool?(await pool.query(`SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics ORDER BY pinned DESC,updated_at DESC`)).rows:read('topics').sort((a,b)=>Number(Boolean(b.pinned))-Number(Boolean(a.pinned))||new Date(b.updatedAt||b.createdAt)-new Date(a.updatedAt||a.createdAt));res.json(topics);}catch(error){console.error('Topics load error:',error);res.status(500).json({error:'Ошибка загрузки форума'});}});
 app.get('/api/topics/:id',async(req,res)=>{try{let topic;if(pool)topic=(await pool.query(`SELECT id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt" FROM topics WHERE id=$1`,[req.params.id])).rows[0];else topic=read('topics').find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});let replies;if(pool)replies=(await pool.query(`SELECT id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt" FROM replies WHERE topic_id=$1 ORDER BY id`,[topic.id])).rows;else replies=read('replies').filter(i=>String(i.topicId)===String(topic.id));topic.authorProfile=publicAuthor(await getUser(Number(topic.authorId)));replies=await Promise.all(replies.map(async r=>({...r,authorProfile:publicAuthor(await getUser(Number(r.authorId)))})));if(pool){await pool.query('UPDATE topics SET views=views+1 WHERE id=$1',[topic.id]);topic.views=Number(topic.views||0)+1;}res.json({...topic,replies});}catch(error){console.error('Topic load error:',error);res.status(500).json({error:'Ошибка загрузки темы'});}});
 
