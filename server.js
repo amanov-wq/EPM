@@ -105,7 +105,7 @@ const isCreator = (user) => user?.role === ROLE_PERMISSIONS.creatorRole;
 
 async function getUser(id) {
   if (pool) {
-    const result = await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE id=$1`, [id]);
+    const result = await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users WHERE id=$1`, [id]);
     if (result.rows[0]) return result.rows[0];
   }
   return read('users').find((user) => Number(user.id) === Number(id)) || null;
@@ -206,7 +206,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
 
 app.post('/api/auth/login',async(req,res)=>{try{
   const nickname=String(req.body.nickname||'').trim(),password=hash(String(req.body.password||''));let user=null;
-  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
+  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(!user||user.password!==password)return res.status(401).json({error:'Неверный ник или пароль'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   await saveUser(user);
