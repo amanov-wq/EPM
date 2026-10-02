@@ -25,6 +25,9 @@ async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users(google_id) WHERE google_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS topics (
       id SERIAL PRIMARY KEY,
@@ -147,7 +150,7 @@ async function replaceFromJson(name, rows) {
       for (const u of rows) {
         await client.query(
           `INSERT INTO users
-            (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at)
+            (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id,google_email,created_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
            ON CONFLICT (id) DO UPDATE SET
              nickname=EXCLUDED.nickname,
