@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { pool, initDatabase } = require('./database');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,6 +48,23 @@ function hash(password) { return crypto.createHash('sha256').update(password).di
 
 const AUTH_SECRET = process.env.EPM_AUTH_SECRET || crypto.createHash('sha256').update(process.env.DATABASE_URL || 'EPM-PERSISTENT-AUTH-SECRET').digest('hex');
 const TOKEN_TTL = 1000 * 60 * 60 * 24 * 30;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+function googleNickname(name, email) {
+  const base = String(name || email?.split('@')[0] || 'Google')
+    .normalize('NFKC').replace(/[^A-Za-zА-Яа-яЁё0-9_]/g,'').slice(0,18) || 'Google';
+  return base;
+}
+async function uniqueGoogleNickname(base) {
+  let nickname=base, n=1;
+  while(true){
+    const exists=pool
+      ? (await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1)',[nickname])).rows[0]
+      : read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
+    if(!exists)return nickname;
+    nickname=(base.slice(0,Math.max(3,24-String(n).length))+n).slice(0,24); n++;
+  }
+}
 function makeToken(userId) {
   const exp = Date.now() + TOKEN_TTL;
   const payload = `${userId}.${exp}`;
@@ -194,6 +212,39 @@ app.post('/api/auth/login',async(req,res)=>{try{
   await saveUser(user);
   res.json({token:makeToken(user.id),user:safeUser(user)});
 }catch(error){console.error('Login error:',error);res.status(500).json({error:'Ошибка входа'});}});
+app.get('/api/auth/google/config',(req,res)=>res.json({clientId:GOOGLE_CLIENT_ID||null}));
+
+app.post('/api/auth/google',async(req,res)=>{
+  try{
+    if(!googleClient||!GOOGLE_CLIENT_ID)return res.status(503).json({error:'Вход через Google ещё не настроен на сервере'});
+    const credential=String(req.body.credential||'').trim();
+    if(!credential)return res.status(400).json({error:'Google не передал данные авторизации'});
+    const ticket=await googleClient.verifyIdToken({idToken:credential,audience:GOOGLE_CLIENT_ID});
+    const payload=ticket.getPayload();
+    if(!payload?.sub||!payload.email_verified)return res.status(401).json({error:'Не удалось подтвердить Google-аккаунт'});
+    let user=null;
+    if(pool){
+      user=(await pool.query('SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users WHERE google_id=$1',[payload.sub])).rows[0]||null;
+      if(!user && payload.email) user=(await pool.query('SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users WHERE LOWER(google_email)=LOWER($1)',[payload.email])).rows[0]||null;
+    }else{
+      user=read('users').find(u=>u.googleId===payload.sub)||read('users').find(u=>String(u.googleEmail||'').toLowerCase()===String(payload.email||'').toLowerCase())||null;
+    }
+    if(user){
+      if(user.blocked)return res.status(403).json({error:'Аккаунт заблокирован'});
+      user.googleId=payload.sub;user.googleEmail=payload.email||user.googleEmail||'';
+      await saveUser(user);
+      return res.json({token:makeToken(user.id),user:safeUser(user)});
+    }
+    const nickname=await uniqueGoogleNickname(googleNickname(payload.name,payload.email));
+    let id;
+    if(pool){const result=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(result.rows[0].id);}
+    else id=nextId(read('users'));
+    user={id,nickname,password:hash(crypto.randomBytes(32).toString('hex')),role:'Пользователь',description:'Новый участник EPM',avatar:payload.picture||'',posts:0,topics:0,level:1,experience:0,blocked:false,googleId:payload.sub,googleEmail:payload.email||'',createdAt:new Date().toISOString()};
+    await saveUser(user);
+    res.status(201).json({token:makeToken(id),user:safeUser(user),created:true});
+  }catch(error){console.error('Google auth error:',error);res.status(401).json({error:'Не удалось выполнить вход через Google'});}
+});
+
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
 app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
 
