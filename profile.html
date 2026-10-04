@@ -332,6 +332,23 @@
 #avatarInput[hidden],
 .avatar-change[hidden],
 .profile-action[hidden]{display:none!important}
+
+/* Final profile message editor */
+.profile-editor-wrap{overflow:hidden;border:1px solid rgba(150,132,207,.22);border-radius:14px;background:rgba(5,8,14,.86);box-shadow:0 12px 35px rgba(0,0,0,.24)}
+.profile-editor-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg,rgba(22,26,38,.98),rgba(12,15,23,.98))}
+.editor-group{display:flex;align-items:center;gap:4px;padding-right:7px;margin-right:1px;border-right:1px solid rgba(255,255,255,.08)}
+.editor-group:last-child{border-right:0}
+.editor-btn{width:34px;height:32px;display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:8px;background:rgba(255,255,255,.035);color:#aeb5c2;font:700 13px Oxanium;cursor:pointer}
+.editor-btn:hover{color:#fff;border-color:rgba(159,137,221,.38);background:rgba(116,91,184,.18)}
+.editor-select{height:32px;max-width:125px;padding:0 8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:#10141d;color:#dce1e9;font:600 12px Oxanium;outline:0}
+.profile-editor{min-height:118px;padding:15px 16px;outline:0;color:#e9edf4;font:500 15px/1.55 Rajdhani;overflow-wrap:anywhere;caret-color:#b7a3ec}
+.profile-editor:empty:before{content:attr(data-placeholder);color:#4f5866;pointer-events:none}
+.profile-editor a{color:#b9a7ed}.profile-editor img{max-width:100%}
+.profile-message{position:relative}
+.profile-message-text{white-space:normal;overflow-wrap:anywhere}
+.profile-message-text p,.profile-message-text div{margin:.35em 0}
+.profile-message-delete{border:0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer;padding:4px 0}
+.profile-message-delete:hover{color:#e19aa3}
 </style>
 </head>
 <body>
@@ -416,7 +433,40 @@
         <h2 id="messagesTitle">Сообщения профиля</h2>
         <p id="messagesHint">Оставляй сообщения в профиле и общайся с пользователем.</p>
         <div class="profile-message-form" id="messageForm">
-          <textarea id="profileMessageInput" maxlength="1000" placeholder="Напишите сообщение..."></textarea>
+          <div class="profile-editor-wrap">
+            <div class="profile-editor-toolbar" role="toolbar" aria-label="Форматирование сообщения">
+              <div class="editor-group">
+                <button class="editor-btn" type="button" data-cmd="bold" title="Жирный"><b>B</b></button>
+                <button class="editor-btn" type="button" data-cmd="italic" title="Курсив"><i>I</i></button>
+                <button class="editor-btn" type="button" data-cmd="underline" title="Подчёркивание"><u>U</u></button>
+              </div>
+              <div class="editor-group">
+                <select class="editor-select" id="messageFont" title="Шрифт">
+                  <option value="Rajdhani">Rajdhani</option>
+                  <option value="Oxanium">Oxanium</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Tahoma">Tahoma</option>
+                  <option value="Courier New">Courier New</option>
+                </select>
+                <select class="editor-select" id="messageSize" title="Размер">
+                  <option value="2">Маленький</option>
+                  <option value="3" selected>Обычный</option>
+                  <option value="4">Большой</option>
+                  <option value="5">Крупный</option>
+                  <option value="6">Огромный</option>
+                </select>
+              </div>
+              <div class="editor-group">
+                <button class="editor-btn" type="button" data-cmd="justifyLeft" title="По левому краю">≡</button>
+                <button class="editor-btn" type="button" data-cmd="justifyCenter" title="По центру">≡</button>
+                <button class="editor-btn" type="button" data-cmd="justifyRight" title="По правому краю">≡</button>
+              </div>
+              <button class="editor-btn" type="button" id="messageClear" title="Убрать форматирование">Tx</button>
+            </div>
+            <div id="profileMessageInput" class="profile-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Напишите сообщение..."></div>
+          </div>
           <div class="profile-message-form-actions">
             <button class="profile-action home-btn-main" id="sendProfileMessage" type="button">✉ Отправить</button>
             <span class="profile-message-status" id="messageStatus"></span>
@@ -537,11 +587,40 @@
 
   let profileOwnerId=0;
 
+  function sanitizeEditorHtml(value=''){
+    const source=String(value||'');
+    const box=document.createElement('div');
+    box.innerHTML=source;
+    box.querySelectorAll('script,style,iframe,object,embed,svg,math,form,input,button').forEach(n=>n.remove());
+    const allowed=['B','STRONG','I','EM','U','BR','P','DIV','SPAN','FONT'];
+    box.querySelectorAll('*').forEach(el=>{
+      if(!allowed.includes(el.tagName)){el.replaceWith(...Array.from(el.childNodes));return;}
+      [...el.attributes].forEach(attr=>{
+        if(el.tagName==='FONT'&&(attr.name==='face'||attr.name==='size'))return;
+        if(el.tagName==='SPAN'&&attr.name==='style'){
+          const styles=[];
+          const m=attr.value.match(/font-family\s*:\s*([^;]+)/i); if(m)styles.push('font-family:'+m[1].replace(/[\\'"]/g,'').trim());
+          const s=attr.value.match(/font-size\s*:\s*([^;]+)/i); if(s)styles.push('font-size:'+s[1].trim());
+          el.setAttribute('style',styles.join(';'));
+          if(!styles.length)el.removeAttribute('style');
+          return;
+        }
+        el.removeAttribute(attr.name);
+      });
+    });
+    return box.innerHTML.trim();
+  }
+
+  function editorPlainText(){
+    return String(document.getElementById('profileMessageInput')?.innerText||'').replace(/\\u00a0/g,' ').trim();
+  }
+
   async function loadProfileMessages(profileId){
     const list=document.getElementById('profileMessageList');
     if(!list)return;
     try{
       const data=await api('/api/profile/'+Number(profileId)+'/messages');
+      const meId=Number(getUser?.()?.id||window.epmUser?.id||0);
       if(!data.messages.length){
         list.innerHTML='<div class="profile-message-status">Пока сообщений нет.</div>';
         return;
@@ -549,16 +628,33 @@
       list.innerHTML=data.messages.map(m=>{
         const avatarHtml=m.avatar?'<img src="'+esc(m.avatar)+'" alt="">':'<span>'+initials(m.nickname)+'</span>';
         const when=date(m.createdAt);
-        return '<article class="profile-message">'+
+        const canDelete=meId>0&&(Number(m.authorId)===meId||Number(profileId)===meId);
+        return '<article class="profile-message" data-message-id="'+Number(m.id)+'">'+
           '<div class="profile-message-head">'+
           '<a class="profile-message-author" href="profile.html?id='+Number(m.authorId)+'">'+avatarHtml+esc(m.nickname)+'</a>'+
           '<span class="profile-message-date">'+esc(when)+'</span>'+
           '</div>'+
-          '<div class="profile-message-text">'+esc(m.content)+'</div>'+
+          '<div class="profile-message-text">'+sanitizeEditorHtml(m.content||'')+'</div>'+
+          (canDelete?'<button class="profile-message-delete" type="button" data-delete-message="'+Number(m.id)+'">Удалить</button>':'')+
           '</article>';
       }).join('');
+      list.querySelectorAll('[data-delete-message]').forEach(button=>{
+        button.onclick=()=>deleteProfileMessage(profileId,Number(button.dataset.deleteMessage),button);
+      });
     }catch(error){
       list.innerHTML='<div class="profile-message-status">'+esc(error.message)+'</div>';
+    }
+  }
+
+  async function deleteProfileMessage(profileId,messageId,button){
+    if(!confirm('Удалить это сообщение?'))return;
+    button.disabled=true;
+    try{
+      await api('/api/profile/'+Number(profileId)+'/messages/'+Number(messageId),{method:'DELETE'});
+      await loadProfileMessages(profileId);
+    }catch(error){
+      button.disabled=false;
+      document.getElementById('messageStatus').textContent=error.message;
     }
   }
 
@@ -566,8 +662,10 @@
     const input=document.getElementById('profileMessageInput');
     const status=document.getElementById('messageStatus');
     const button=document.getElementById('sendProfileMessage');
-    const content=input.value.trim();
-    if(!content)return;
+    const content=sanitizeEditorHtml(input.innerHTML);
+    const plain=editorPlainText();
+    if(!plain){status.textContent='Введите сообщение.';return;}
+    if(plain.length>1000){status.textContent='Максимум 1000 символов.';return;}
     if(!profileOwnerId)return;
     button.disabled=true;
     status.textContent='Отправка...';
@@ -577,7 +675,7 @@
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({content})
       });
-      input.value='';
+      input.innerHTML='';
       status.textContent='Сообщение отправлено.';
       await loadProfileMessages(profileOwnerId);
     }catch(error){
@@ -585,7 +683,7 @@
     }finally{button.disabled=false}
   }
 
-  const targetId=Number(new URLSearchParams(location.search).get('id')||0);
+  const targetId=Number(new URLSearchParams(location.search).get('id')||0);Number(new URLSearchParams(location.search).get('id')||0);
   if(targetId>0){
     try{
       const data=await api('/api/profile/'+targetId);
@@ -708,6 +806,28 @@
   };
 
   document.getElementById('sendProfileMessage').onclick=sendProfileMessage;
+  document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
+  });
+
+  document.querySelectorAll('[data-cmd]').forEach(button=>{
+    button.onclick=()=>{
+      document.getElementById('profileMessageInput').focus();
+      document.execCommand(button.dataset.cmd,false,null);
+    };
+  });
+  document.getElementById('messageFont').onchange=e=>{
+    document.getElementById('profileMessageInput').focus();
+    document.execCommand('fontName',false,e.target.value);
+  };
+  document.getElementById('messageSize').onchange=e=>{
+    document.getElementById('profileMessageInput').focus();
+    document.execCommand('fontSize',false,e.target.value);
+  };
+  document.getElementById('messageClear').onclick=()=>{
+    document.getElementById('profileMessageInput').focus();
+    document.execCommand('removeFormat',false,null);
+  };
   document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
     if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
   });
