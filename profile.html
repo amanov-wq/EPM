@@ -439,7 +439,6 @@
       profileOwnerId=targetId;
       show(data.user,true);
       document.title='Профиль '+(data.user.nickname||'')+' — EPM';
-      document.getElementById('messageForm').style.display='none';
       document.getElementById('messagesHint').textContent='Оставьте сообщение в профиле этого пользователя.';
       await loadProfileMessages(targetId);
       return;
