@@ -114,6 +114,31 @@ async function auth(req,res,next) {
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;return copy;}
 function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
 
+app.get('/api/users/search',async(req,res)=>{
+  try{
+    const q=String(req.query.q||'').trim().slice(0,24);
+    if(q.length<2)return res.json({users:[]});
+    if(pool){
+      const result=await pool.query(`SELECT id,nickname,role,avatar FROM users WHERE blocked=FALSE AND nickname ILIKE $1 ORDER BY CASE WHEN LOWER(nickname)=LOWER($2) THEN 0 ELSE 1 END,nickname LIMIT 20`,[`%${q}%`,q]);
+      return res.json({users:result.rows});
+    }
+    const users=read('users').filter(u=>!u.blocked&&String(u.nickname||'').toLowerCase().includes(q.toLowerCase())).slice(0,20).map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',avatar:u.avatar||''}));
+    res.json({users});
+  }catch(error){console.error('User search error:',error);res.status(500).json({error:'Ошибка поиска пользователей'});}
+}
+
+app.post('/api/presence/heartbeat',auth,async(req,res)=>{
+  try{
+    if(pool) await pool.query(`INSERT INTO online_sessions(user_id,last_seen) VALUES($1,NOW()) ON CONFLICT(user_id) DO UPDATE SET last_seen=EXCLUDED.last_seen`,[req.user.id]);
+    else{
+      global.__epmOnline=global.__epmOnline||new Map();
+      global.__epmOnline.set(Number(req.user.id),Date.now());
+    }
+    res.json({ok:true});
+  }catch(error){console.error('Presence heartbeat error:',error);res.status(500).json({error:'Не удалось обновить статус онлайн'});}
+});
+
+
 
 app.get('/api/server-status', async (req, res) => {
   const host = 'EstamonHost.ru';
@@ -204,6 +229,22 @@ app.get('/api/admin/users',auth,async(req,res)=>{
   if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
   try{const users=pool?(await pool.query(`SELECT id,nickname,role,description,posts,topics,avatar,blocked,created_at AS "createdAt" FROM users ORDER BY id`)).rows:read('users').map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',description:u.description||'',posts:u.posts||0,topics:u.topics||0,avatar:u.avatar||'',blocked:Boolean(u.blocked),createdAt:u.createdAt||null}));res.json({users});}
   catch(error){console.error('Admin users error:',error);res.status(500).json({error:'Ошибка загрузки пользователей'});}
+});
+
+app.get('/api/admin/online',auth,async(req,res)=>{
+  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  try{
+    if(pool){
+      const result=await pool.query(`SELECT u.id,u.nickname,u.role,u.avatar,s.last_seen AS "lastSeen"
+        FROM online_sessions s JOIN users u ON u.id=s.user_id
+        WHERE u.blocked=FALSE AND s.last_seen > NOW()-INTERVAL '90 seconds'
+        ORDER BY s.last_seen DESC`);
+      return res.json({users:result.rows,checkedAt:new Date().toISOString()});
+    }
+    const now=Date.now(), online=global.__epmOnline||new Map();
+    const users=read('users').filter(u=>!u.blocked&&(now-(online.get(Number(u.id))||0))<90000).map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',avatar:u.avatar||'',lastSeen:new Date(online.get(Number(u.id))).toISOString()}));
+    res.json({users,checkedAt:new Date().toISOString()});
+  }catch(error){console.error('Admin online error:',error);res.status(500).json({error:'Ошибка загрузки списка онлайн'});}
 });
 
 app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
