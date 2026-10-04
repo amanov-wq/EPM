@@ -1,3 +1,4 @@
+document.documentElement.classList.add('epm-auth-ready');
 const STANDARD_NAV=[['index.html','Главная'],['server-info.html','⚔️ Сервер'],['forum.html','Форум'],['news.html','Новости'],['rules.html','Правила'],['donate.html','Донат'],['punishments.html','Блокировки'],['battlepass.html','🎟️ Battle Pass']];
 const TOKEN_KEY='epmToken',USER_KEY='epmUser';
 function getToken(){return localStorage.getItem(TOKEN_KEY)||''}
