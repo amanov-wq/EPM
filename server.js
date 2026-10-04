@@ -284,7 +284,77 @@ app.post('/api/topics/:id/open',auth,async(req,res)=>{if(!isStaff(req.user))retu
 app.delete('/api/topics/:id',auth,async(req,res)=>{if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав для удаления темы'});try{const topicId=req.params.id;if(pool){const client=await pool.connect();try{await client.query('BEGIN');const topic=(await client.query('SELECT id,author_id AS "authorId" FROM topics WHERE id=$1 FOR UPDATE',[topicId])).rows[0];if(!topic){await client.query('ROLLBACK');return res.status(404).json({error:'Тема не найдена'});}const replyAuthors=await client.query('SELECT author_id AS "authorId" FROM replies WHERE topic_id=$1',[topic.id]);await client.query('DELETE FROM replies WHERE topic_id=$1',[topic.id]);await client.query('DELETE FROM topics WHERE id=$1',[topic.id]);if(topic.authorId)await client.query('UPDATE users SET topics=GREATEST(topics-1,0) WHERE id=$1',[topic.authorId]);for(const row of replyAuthors.rows){if(row.authorId)await client.query('UPDATE users SET posts=GREATEST(posts-1,0) WHERE id=$1',[row.authorId]);}await client.query('COMMIT');return res.json({ok:true,deletedTopicId:topic.id,deletedReplies:replyAuthors.rowCount});}catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(topicId));if(!topic)return res.status(404).json({error:'Тема не найдена'});const replies=read('replies'),removedReplies=replies.filter(i=>String(i.topicId)===String(topic.id));write('topics',topics.filter(i=>String(i.id)!==String(topic.id)));write('replies',replies.filter(i=>String(i.topicId)!==String(topic.id)));const users=read('users'),author=users.find(i=>Number(i.id)===Number(topic.authorId));if(author)author.topics=Math.max(0,(author.topics||0)-1);for(const reply of removedReplies){const u=users.find(i=>Number(i.id)===Number(reply.authorId));if(u)u.posts=Math.max(0,(u.posts||0)-1);}write('users',users);res.json({ok:true,deletedTopicId:topic.id,deletedReplies:removedReplies.length});}catch(error){console.error('Topic delete error:',error);res.status(500).json({error:'Не удалось удалить тему'});}});
 
 app.get('/api/profile/:id/messages',async(req,res)=>{try{const profileUserId=Number(req.params.id);if(!Number.isInteger(profileUserId)||profileUserId<1)return res.status(400).json({error:'Некорректный пользователь'});const profile=await getUser(profileUserId);if(!profile)return res.status(404).json({error:'Пользователь не найден'});if(pool){const result=await pool.query(`SELECT m.id,m.profile_user_id AS "profileUserId",m.author_id AS "authorId",m.author,m.content,m.created_at AS "createdAt",u.nickname,u.avatar FROM profile_messages m LEFT JOIN users u ON u.id=m.author_id WHERE m.profile_user_id=$1 ORDER BY m.created_at DESC,m.id DESC LIMIT 100`,[profileUserId]);return res.json({messages:result.rows});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')).filter(i=>Number(i.profileUserId)===profileUserId).sort((a,b)=>Number(b.id)-Number(a.id)).slice(0,100).map(i=>({...i,nickname:i.nickname||i.author,avatar:i.avatar||''}));res.json({messages});}catch(error){console.error('Profile messages load error:',error);res.status(500).json({error:'Ошибка загрузки сообщений'});}});
-app.post('/api/profile/:id/messages',auth,async(req,res)=>{const profileUserId=Number(req.params.id),content=String(req.body.content||'').trim();if(!Number.isInteger(profileUserId)||profileUserId<1)return res.status(400).json({error:'Некорректный пользователь'});if(!content||content.length>1000)return res.status(400).json({error:'Сообщение должно содержать от 1 до 1000 символов'});try{const profile=await getUser(profileUserId);if(!profile)return res.status(404).json({error:'Пользователь не найден'});const now=new Date().toISOString();if(pool){const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);return res.status(201).json({message:{...result.rows[0],nickname:req.user.nickname,avatar:req.user.avatar||''}});}const file=path.join(DATA_DIR,'profile_messages.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');const messages=JSON.parse(fs.readFileSync(file,'utf8')),message={id:nextId(messages),profileUserId,authorId:req.user.id,author:req.user.nickname,nickname:req.user.nickname,avatar:req.user.avatar||'',content,createdAt:now};messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');res.status(201).json({message});}catch(error){console.error('Profile message create error:',error);res.status(500).json({error:'Не удалось отправить сообщение'});}});
+function sanitizeProfileMessageHtml(value=''){
+  let html=String(value||'').replace(/<!--[^]*?-->/g,'');
+  html=html.replace(/<font\b([^>]*)>/gi,(match,attrs)=>{
+    const face=(attrs.match(/\bface=["']([^"']+)["']/i)||[])[1]||'';
+    const size=(attrs.match(/\bsize=["']([1-7])["']/i)||[])[1]||'';
+    const fonts=['Arial','Oxanium','Rajdhani','Georgia','Verdana','Tahoma','Courier New'];
+    const safeFont=fonts.find(f=>f.toLowerCase()===face.toLowerCase());
+    const sizes={1:'12px',2:'13px',3:'14px',4:'16px',5:'18px',6:'22px',7:'28px'};
+    const style=[];
+    if(safeFont)style.push('font-family:'+safeFont);
+    if(sizes[size])style.push('font-size:'+sizes[size]);
+    return style.length?'<span style="'+style.join(';')+'">':'<span>';
+  }).replace(/<\/font>/gi,'</span>');
+  html=html.replace(/<(?!\/?(?:b|strong|i|em|u|br|p|div|span)\b)[^>]*>/gi,'');
+  html=html.replace(/<(b|strong|i|em|u|br|p|div)\b[^>]*>/gi,'<$1>');
+  html=html.replace(/<span\b([^>]*)>/gi,(match,attrs)=>{
+    const style=(attrs.match(/\bstyle=["']([^"']*)["']/i)||[])[1]||'';
+    const out=[];
+    const fm=style.match(/font-family\s*:\s*([^;]+)/i);
+    const sm=style.match(/font-size\s*:\s*([^;]+)/i);
+    const fonts=['Arial','Oxanium','Rajdhani','Georgia','Verdana','Tahoma','Courier New'];
+    const sizes=['12px','13px','14px','16px','18px','22px','28px'];
+    if(fm){const v=fm[1].replace(/[\\'"]/g,'').trim();const safe=fonts.find(f=>f.toLowerCase()===v.toLowerCase());if(safe)out.push('font-family:'+safe);}
+    if(sm){const v=sm[1].trim();if(sizes.includes(v))out.push('font-size:'+v);}
+    return out.length?'<span style="'+out.join(';')+'">':'<span>';
+  });
+  return html.trim();
+}
+app.post('/api/profile/:id/messages',auth,async(req,res)=>{
+  const profileUserId=Number(req.params.id),content=sanitizeProfileMessageHtml(req.body.content||'');
+  const plain=content.replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').trim();
+  if(!Number.isInteger(profileUserId)||profileUserId<1)return res.status(400).json({error:'Некорректный пользователь'});
+  if(!plain||plain.length>1000)return res.status(400).json({error:'Сообщение должно содержать от 1 до 1000 символов'});
+  try{
+    const profile=await getUser(profileUserId);
+    if(!profile)return res.status(404).json({error:'Пользователь не найден'});
+    const now=new Date().toISOString();
+    if(pool){
+      const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);
+      return res.status(201).json({message:{...result.rows[0],nickname:req.user.nickname,avatar:req.user.avatar||''}});
+    }
+    const file=path.join(DATA_DIR,'profile_messages.json');
+    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
+    const messages=JSON.parse(fs.readFileSync(file,'utf8')),message={id:nextId(messages),profileUserId,authorId:req.user.id,author:req.user.nickname,nickname:req.user.nickname,avatar:req.user.avatar||'',content,createdAt:now};
+    messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');res.status(201).json({message});
+  }catch(error){console.error('Profile message create error:',error);res.status(500).json({error:'Не удалось отправить сообщение'});}
+});
+app.delete('/api/profile/:profileId/messages/:messageId',auth,async(req,res)=>{
+  const profileUserId=Number(req.params.profileId),messageId=Number(req.params.messageId);
+  if(!Number.isInteger(profileUserId)||profileUserId<1||!Number.isInteger(messageId)||messageId<1)return res.status(400).json({error:'Некорректный запрос'});
+  try{
+    if(pool){
+      const result=await pool.query('SELECT id,profile_user_id AS "profileUserId",author_id AS "authorId" FROM profile_messages WHERE id=$1 AND profile_user_id=$2',[messageId,profileUserId]);
+      const message=result.rows[0];
+      if(!message)return res.status(404).json({error:'Сообщение не найдено'});
+      const allowed=Number(message.authorId)===Number(req.user.id)||Number(message.profileUserId)===Number(req.user.id)||canAccessAdmin(req.user);
+      if(!allowed)return res.status(403).json({error:'Недостаточно прав для удаления сообщения'});
+      await pool.query('DELETE FROM profile_messages WHERE id=$1',[messageId]);
+      return res.json({ok:true});
+    }
+    const file=path.join(DATA_DIR,'profile_messages.json');
+    if(!fs.existsSync(file))return res.status(404).json({error:'Сообщение не найдено'});
+    const messages=JSON.parse(fs.readFileSync(file,'utf8')),message=messages.find(m=>Number(m.id)===messageId&&Number(m.profileUserId)===profileUserId);
+    if(!message)return res.status(404).json({error:'Сообщение не найдено'});
+    const allowed=Number(message.authorId)===Number(req.user.id)||Number(message.profileUserId)===Number(req.user.id)||canAccessAdmin(req.user);
+    if(!allowed)return res.status(403).json({error:'Недостаточно прав для удаления сообщения'});
+    const next=messages.filter(m=>!(Number(m.id)===messageId&&Number(m.profileUserId)===profileUserId));
+    fs.writeFileSync(file,JSON.stringify(next,null,2),'utf8');
+    return res.json({ok:true});
+  }catch(error){console.error('Profile message delete error:',error);res.status(500).json({error:'Не удалось удалить сообщение'});}
+});
 
 app.get('/api/unbans',async(req,res)=>{
   try{
