@@ -125,7 +125,7 @@ app.get('/api/users/search',async(req,res)=>{
     const users=read('users').filter(u=>!u.blocked&&String(u.nickname||'').toLowerCase().includes(q.toLowerCase())).slice(0,20).map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',avatar:u.avatar||''}));
     res.json({users});
   }catch(error){console.error('User search error:',error);res.status(500).json({error:'Ошибка поиска пользователей'});}
-}
+});
 
 app.post('/api/presence/heartbeat',auth,async(req,res)=>{
   try{
