@@ -637,17 +637,43 @@
 
 
   document.getElementById('sendProfileMessage').onclick=sendProfileMessage;
+  const editor=document.getElementById('profileMessageInput');
+  const fontPicker=document.getElementById('profileFontFamily');
+
+  function focusEditor(){ editor.focus(); }
+
   document.querySelectorAll('.profile-editor-toolbar [data-cmd]').forEach(button=>{
+    button.addEventListener('mousedown',e=>e.preventDefault());
     button.addEventListener('click',()=>{
       const cmd=button.dataset.cmd;
-      if(cmd==='createLink'){
+      focusEditor();
+      if(cmd==='fontSizeDown'){
+        document.execCommand('decreaseFontSize',false,null);
+      }else if(cmd==='fontSizeUp'){
+        document.execCommand('increaseFontSize',false,null);
+      }else if(cmd==='fontSizeReset'){
+        document.execCommand('fontSize',false,'3');
+        editor.style.fontSize='15px';
+      }else if(cmd==='createLink'){
         const url=prompt('Ссылка:');
-        if(url)document.execCommand('createLink',false,url);
+        if(url){
+          const safe=url.indexOf('http://')===0 || url.indexOf('https://')===0 ? url : 'https://'+url;
+          document.execCommand('createLink',false,safe);
+        }
       }else{
         document.execCommand(cmd,false,null);
       }
-      document.getElementById('profileMessageInput').focus();
+      focusEditor();
     });
+  });
+
+  fontPicker.addEventListener('mousedown',e=>e.stopPropagation());
+  fontPicker.addEventListener('change',()=>{
+    const font=fontPicker.value;
+    focusEditor();
+    document.execCommand('fontName',false,font);
+    editor.style.fontFamily=font;
+    editor.dataset.fontFamily=font;
   });
   document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
     if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
