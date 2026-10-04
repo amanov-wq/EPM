@@ -257,6 +257,22 @@
         <p>Создавай темы, отвечай игрокам и участвуй в жизни сообщества.</p>
         <a class="profile-action" href="forum.html">💬 Перейти на форум</a>
       </section>
+
+      <section class="profile-panel profile-messages">
+        <span class="hero-tag">PROFILE MESSAGES</span>
+        <h2 id="messagesTitle">Сообщения профиля</h2>
+        <p id="messagesHint">Оставляй сообщения в профиле и общайся с пользователем.</p>
+        <div class="profile-message-form" id="messageForm">
+          <textarea id="profileMessageInput" maxlength="1000" placeholder="Напишите сообщение..."></textarea>
+          <div class="profile-message-form-actions">
+            <button class="profile-action home-btn-main" id="sendProfileMessage" type="button">✉ Отправить</button>
+            <span class="profile-message-status" id="messageStatus"></span>
+          </div>
+        </div>
+        <div class="profile-message-list" id="profileMessageList">
+          <div class="profile-message-status">Загрузка сообщений...</div>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -366,12 +382,66 @@
     return data;
   }
 
+  let profileOwnerId=0;
+
+  async function loadProfileMessages(profileId){
+    const list=document.getElementById('profileMessageList');
+    if(!list)return;
+    try{
+      const data=await api('/api/profile/'+Number(profileId)+'/messages');
+      if(!data.messages.length){
+        list.innerHTML='<div class="profile-message-status">Пока сообщений нет.</div>';
+        return;
+      }
+      list.innerHTML=data.messages.map(m=>{
+        const avatarHtml=m.avatar?'<img src="'+esc(m.avatar)+'" alt="">':'<span>'+initials(m.nickname)+'</span>';
+        const when=date(m.createdAt);
+        return '<article class="profile-message">'+
+          '<div class="profile-message-head">'+
+          '<a class="profile-message-author" href="profile.html?id='+Number(m.authorId)+'">'+avatarHtml+esc(m.nickname)+'</a>'+
+          '<span class="profile-message-date">'+esc(when)+'</span>'+
+          '</div>'+
+          '<div class="profile-message-text">'+esc(m.content)+'</div>'+
+          '</article>';
+      }).join('');
+    }catch(error){
+      list.innerHTML='<div class="profile-message-status">'+esc(error.message)+'</div>';
+    }
+  }
+
+  async function sendProfileMessage(){
+    const input=document.getElementById('profileMessageInput');
+    const status=document.getElementById('messageStatus');
+    const button=document.getElementById('sendProfileMessage');
+    const content=input.value.trim();
+    if(!content)return;
+    if(!profileOwnerId)return;
+    button.disabled=true;
+    status.textContent='Отправка...';
+    try{
+      await api('/api/profile/'+Number(profileOwnerId)+'/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({content})
+      });
+      input.value='';
+      status.textContent='Сообщение отправлено.';
+      await loadProfileMessages(profileOwnerId);
+    }catch(error){
+      status.textContent=error.message;
+    }finally{button.disabled=false}
+  }
+
   const targetId=Number(new URLSearchParams(location.search).get('id')||0);
   if(targetId>0){
     try{
       const data=await api('/api/profile/'+targetId);
+      profileOwnerId=targetId;
       show(data.user,true);
       document.title='Профиль '+(data.user.nickname||'')+' — EPM';
+      document.getElementById('messageForm').style.display='none';
+      document.getElementById('messagesHint').textContent='Оставьте сообщение в профиле этого пользователя.';
+      await loadProfileMessages(targetId);
       return;
     }catch(error){
       guest.hidden=false;userBox.hidden=true;
@@ -391,8 +461,10 @@
 
   try{
     const data=await api('/api/auth/me');
+    profileOwnerId=Number(data.user.id);
     show(data.user);
     saveLocal(data.user);
+    await loadProfileMessages(profileOwnerId);
   }catch(error){
     if(error.status===401||error.status===403){
       localStorage.removeItem('epmToken');
@@ -482,6 +554,12 @@
     reader.readAsDataURL(file);
     avatarInput.value='';
   };
+
+  document.getElementById('sendProfileMessage').onclick=sendProfileMessage;
+  document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
+  });
+
 
   document.getElementById('logout').onclick=()=>{
     if(typeof logout==='function')logout();
