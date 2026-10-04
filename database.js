@@ -25,9 +25,11 @@ async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT;
-    CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users(google_id) WHERE google_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS online_sessions (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
 
     CREATE TABLE IF NOT EXISTS topics (
       id SERIAL PRIMARY KEY,
@@ -150,7 +152,7 @@ async function replaceFromJson(name, rows) {
       for (const u of rows) {
         await client.query(
           `INSERT INTO users
-            (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id,google_email,created_at)
+            (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
            ON CONFLICT (id) DO UPDATE SET
              nickname=EXCLUDED.nickname,
@@ -178,8 +180,6 @@ async function replaceFromJson(name, rows) {
             u.level || 1,
             u.experience || 0,
             !!u.blocked,
-            u.googleId || null,
-            u.googleEmail || null,
             u.createdAt || new Date()
           ]
         );
@@ -304,7 +304,7 @@ async function loadToJson(name) {
 
   if (name === 'users') {
     const { rows } = await pool.query(
-      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_id AS "googleId",google_email AS "googleEmail",created_at AS "createdAt" FROM users ORDER BY id'
+      'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users ORDER BY id'
     );
     return rows;
   }
