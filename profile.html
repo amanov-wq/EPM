@@ -172,6 +172,158 @@
 
 /* FIX: hidden attribute must always hide guest/user blocks.
    .guest-profile uses display:flex, which can override the browser's default [hidden] rule. */
+
+/* PROFILE MESSAGES — EPM editor */
+.profile-messages{
+  grid-column:1 / -1;
+  padding:28px;
+}
+.profile-message-composer{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr);
+  gap:13px;
+  margin-top:20px;
+}
+.profile-message-avatar{
+  width:48px;height:48px;border-radius:14px;
+  display:grid;place-items:center;overflow:hidden;
+  background:linear-gradient(145deg,#5b4b93,#171321);
+  border:1px solid rgba(166,145,231,.25);
+  color:#eee8ff;font:800 15px Oxanium;
+  box-shadow:0 10px 28px rgba(0,0,0,.3);
+}
+.profile-message-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-editor-wrap{
+  overflow:hidden;
+  border:1px solid rgba(150,132,207,.22);
+  border-radius:14px;
+  background:rgba(5,8,14,.86);
+  box-shadow:0 12px 35px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.035);
+  transition:.2s;
+}
+.profile-editor-wrap:focus-within{
+  border-color:rgba(147,123,215,.58);
+  box-shadow:0 0 0 3px rgba(116,91,184,.12),0 15px 40px rgba(0,0,0,.28);
+}
+.profile-editor-toolbar{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  padding:8px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(180deg,rgba(22,26,38,.98),rgba(12,15,23,.98));
+}
+.toolbar-group{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding-right:7px;
+  margin-right:1px;
+  border-right:1px solid rgba(255,255,255,.08);
+}
+.toolbar-group:last-child{border-right:0;padding-right:0}
+.editor-btn{
+  width:34px;height:32px;
+  display:grid;place-items:center;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:rgba(255,255,255,.035);
+  color:#aeb5c2;
+  font:700 13px Oxanium;
+  cursor:pointer;
+  transition:.18s;
+}
+.editor-btn:hover{
+  color:#fff;
+  border-color:rgba(159,137,221,.38);
+  background:rgba(116,91,184,.18);
+  transform:translateY(-1px);
+}
+.editor-btn:active{transform:translateY(0)}
+.editor-btn-wide{font-size:15px}
+.font-picker{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  height:32px;
+  padding:0 8px 0 10px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;
+  background:rgba(255,255,255,.035);
+}
+.font-picker span{
+  color:#687180;
+  font:600 9px Oxanium;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+}
+.font-picker select{
+  max-width:118px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#dce1e9;
+  font:600 12px Rajdhani;
+  cursor:pointer;
+}
+.font-picker option{background:#10141d;color:#e7eaf0}
+.profile-editor{
+  min-height:116px;
+  padding:15px 16px;
+  outline:0;
+  color:#e9edf4;
+  font:500 15px/1.55 Rajdhani;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  caret-color:#b7a3ec;
+}
+.profile-editor:empty:before{
+  content:attr(data-placeholder);
+  color:#4f5866;
+  pointer-events:none;
+}
+.profile-editor a{color:#b9a7ed}
+.profile-message-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:10px;
+}
+.profile-send{
+  min-height:40px;
+  padding:9px 16px;
+  border:1px solid rgba(153,132,220,.35);
+  border-radius:9px;
+  background:linear-gradient(135deg,#6d59a7,#4d3d80);
+  color:#fff;
+  font:700 11px Oxanium;
+  letter-spacing:.45px;
+  cursor:pointer;
+  box-shadow:0 8px 24px rgba(76,57,127,.24);
+  transition:.18s;
+}
+.profile-send:hover{
+  transform:translateY(-1px);
+  border-color:rgba(194,178,244,.65);
+  box-shadow:0 11px 28px rgba(76,57,127,.34);
+}
+.profile-send:disabled{opacity:.55;cursor:wait;transform:none}
+.profile-message-status{color:#6e7785;font:500 11px Rajdhani}
+@media(max-width:600px){
+  .profile-messages{padding:20px}
+  .profile-message-composer{grid-template-columns:1fr}
+  .profile-message-avatar{width:44px;height:44px}
+  .profile-editor-toolbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  .toolbar-group{flex:0 0 auto}
+  .font-picker{flex:0 0 auto}
+  .font-picker select{max-width:96px}
+  .profile-message-footer{align-items:stretch;flex-direction:column-reverse}
+  .profile-send{width:100%}
+}
+
 #guest[hidden],
 #user[hidden],
 #settingsButton[hidden],
@@ -267,18 +419,37 @@
           <div>
             <div class="profile-editor-wrap">
               <div class="profile-editor-toolbar" aria-label="Панель форматирования">
-                <button type="button" data-cmd="bold"><b>B</b></button>
-                <button type="button" data-cmd="italic"><i>I</i></button>
-                <button type="button" data-cmd="underline"><u>U</u></button>
-                <span class="tool-sep"></span>
-                <button type="button" data-cmd="insertUnorderedList">☷</button>
-                <button type="button" data-cmd="justifyLeft">≡</button>
-                <button type="button" data-cmd="justifyCenter">≡</button>
-                <span class="tool-sep"></span>
-                <button type="button" data-cmd="createLink">🔗</button>
-                <button type="button" data-cmd="removeFormat">⌫</button>
+                <div class="toolbar-group">
+                  <button type="button" class="editor-btn" data-cmd="bold" title="Жирный"><b>B</b></button>
+                  <button type="button" class="editor-btn" data-cmd="italic" title="Курсив"><i>I</i></button>
+                  <button type="button" class="editor-btn" data-cmd="underline" title="Подчёркнутый"><u>U</u></button>
+                </div>
+                <div class="toolbar-group">
+                  <button type="button" class="editor-btn" data-cmd="fontSizeDown" title="Уменьшить шрифт">A−</button>
+                  <button type="button" class="editor-btn editor-btn-wide" data-cmd="fontSizeReset" title="Обычный размер">A</button>
+                  <button type="button" class="editor-btn" data-cmd="fontSizeUp" title="Увеличить шрифт">A+</button>
+                </div>
+                <label class="font-picker" title="Шрифт">
+                  <span>Шрифт</span>
+                  <select id="profileFontFamily" aria-label="Шрифт">
+                    <option value="Rajdhani">Rajdhani</option>
+                    <option value="Oxanium">Oxanium</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="monospace">Monospace</option>
+                  </select>
+                </label>
+                <div class="toolbar-group">
+                  <button type="button" class="editor-btn" data-cmd="justifyLeft" title="По левому краю">≡</button>
+                  <button type="button" class="editor-btn" data-cmd="justifyCenter" title="По центру">≡</button>
+                  <button type="button" class="editor-btn" data-cmd="insertUnorderedList" title="Список">☷</button>
+                </div>
+                <div class="toolbar-group">
+                  <button type="button" class="editor-btn" data-cmd="createLink" title="Добавить ссылку">↗</button>
+                  <button type="button" class="editor-btn" data-cmd="removeFormat" title="Очистить форматирование">⌫</button>
+                </div>
               </div>
-              <div id="profileMessageInput" class="profile-editor" contenteditable="true" role="textbox" aria-multiline="true"></div>
+              <div id="profileMessageInput" class="profile-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Напишите сообщение..."></div>
             </div>
             <div class="profile-message-footer">
               <span class="profile-message-status" id="messageStatus"></span>
