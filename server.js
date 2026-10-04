@@ -14,6 +14,9 @@ const PUNISHMENT_API_KEYS = Object.freeze({
   'Blood Shed World': process.env.EPM_BLOOD_API_KEY || ''
 });
 const PUNISHMENT_MODES = Object.freeze(['Estamon Grief','Estamon Creative','Estamon Survial','Blood Shed World']);
+const SERVER_MODES=Object.freeze([{mode:'Estamon Grief',version:'1.19.4',plugin:'AdvancedBan',host:process.env.EPM_GRIEF_HOST||'EstamonHost.ru',port:Number(process.env.EPM_GRIEF_PORT||25565)},{mode:'Estamon Creative',version:'1.21.4',plugin:'Essentials',host:process.env.EPM_CREATIVE_HOST||'EstamonHost.ru',port:Number(process.env.EPM_CREATIVE_PORT||25565)},{mode:'Estamon Survial',version:'1.16.5',plugin:'Essentials',host:process.env.EPM_SURVIVAL_HOST||'EstamonHost.ru',port:Number(process.env.EPM_SURVIVAL_PORT||25565)}]);
+function serverModeConfig(mode){return SERVER_MODES.find(x=>x.mode===mode)||null}
+async function notifyMentions(content,{actorId,url,title='Упоминание в EPM',bodyPrefix=''}){const names=[...String(content||'').matchAll(/@([A-Za-zА-Яа-яЁё0-9_]{3,24})/g)].map(x=>x[1].toLowerCase()),unique=[...new Set(names)];if(!unique.length)return;try{let users=[];if(pool)users=(await pool.query('SELECT id,nickname FROM users WHERE blocked=FALSE AND LOWER(nickname)=ANY($1::text[])',[unique])).rows;else users=read('users').filter(u=>!u.blocked&&unique.includes(String(u.nickname||'').toLowerCase()));for(const u of users)await createNotification({recipientId:u.id,actorId,type:'mention',title,body:bodyPrefix||'Вас упомянули в EPM.',url})}catch(e){console.error('Mention notification error:',e)}}
 function punishmentApiKeyValid(mode, key) {
   const expected = PUNISHMENT_API_KEYS[mode];
   if (!expected || !key) return false;
@@ -140,43 +143,9 @@ app.post('/api/presence/heartbeat',auth,async(req,res)=>{
 
 
 
-app.get('/api/server-status', async (req, res) => {
-  const host = 'EstamonHost.ru';
-  const port = 25565;
-  try {
-    const address = encodeURIComponent(`${host}:${port}`);
-    const [javaResponse, bedrockResponse] = await Promise.all([
-      fetch(`https://api.mcstatus.io/v2/status/java/${address}?query=false&timeout=5`, {headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)}),
-      fetch(`https://api.mcstatus.io/v2/status/bedrock/${address}?query=false&timeout=5`, {headers:{Accept:'application/json'},signal:AbortSignal.timeout(7000)})
-    ]);
-    const javaRaw=await javaResponse.text(), bedrockRaw=await bedrockResponse.text();
-    let java={},bedrock={}; try{java=JSON.parse(javaRaw)}catch{} try{bedrock=JSON.parse(bedrockRaw)}catch{}
-    if(!javaResponse.ok && !bedrockResponse.ok) throw new Error('Сервер недоступен');
-    res.json({
-      host,port,
-      online:Boolean(java.online||bedrock.online),
-      java:{online:Boolean(java.online),version:java.version?.name_clean||java.version?.name_raw||null,protocol:java.version?.protocol||null,players:Number(java.players?.online??0),maxPlayers:Number(java.players?.max??0)},
-      bedrock:{online:Boolean(bedrock.online),version:bedrock.version?.name_clean||bedrock.version?.name_raw||null,players:Number(bedrock.players?.online??0),maxPlayers:Number(bedrock.players?.max??0)},
-      version:java.version?.name_clean||java.version?.name_raw||bedrock.version?.name_clean||bedrock.version?.name_raw||null,
-      protocol:java.version?.protocol||bedrock.version?.protocol||null,
-      players:Number(java.players?.online??bedrock.players?.online??0),
-      maxPlayers:Number(java.players?.max??bedrock.players?.max??0),
-      motd:java.motd?.clean||bedrock.motd?.clean||'',
-      gamemode:java.gamemode||bedrock.gamemode||'Survival',
-      checkedAt:new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Server status error:', error);
-    res.status(502).json({
-      host,
-      port,
-      online: false,
-      unavailable: true,
-      error: 'Не удалось проверить сервер',
-      checkedAt: new Date().toISOString()
-    });
-  }
-});
+app.get('/api/server-status',async(req,res)=>{const host='EstamonHost.ru',port=25565;try{const addr=encodeURIComponent(host+':'+port),[jr,br]=await Promise.all([fetch('https://api.mcstatus.io/v2/status/java/'+addr+'?query=false&timeout=5',{signal:AbortSignal.timeout(7000)}),fetch('https://api.mcstatus.io/v2/status/bedrock/'+addr+'?query=false&timeout=5',{signal:AbortSignal.timeout(7000)})]);let j={},d={};try{j=JSON.parse(await jr.text())}catch{}try{d=JSON.parse(await br.text())}catch{}if(!jr.ok&&!br.ok)throw 0;res.json({host,port,online:Boolean(j.online||d.online),java:{online:Boolean(j.online),version:j.version?.name_clean||j.version?.name_raw||null,players:Number(j.players?.online||0),maxPlayers:Number(j.players?.max||0)},bedrock:{online:Boolean(d.online),version:d.version?.name_clean||d.version?.name_raw||null,players:Number(d.players?.online||0),maxPlayers:Number(d.players?.max||0)},checkedAt:new Date().toISOString()})}catch{res.status(502).json({host,port,online:false,error:'Не удалось проверить сервер',checkedAt:new Date().toISOString()})}});
+app.get('/api/servers-status',async(req,res)=>{try{let saved=[];if(pool)saved=(await pool.query('SELECT mode,host,port,online,version,players,max_players AS "maxPlayers",tps,plugin,updated_at AS "updatedAt" FROM server_status ORDER BY id')).rows;const out=[];for(const c of SERVER_MODES){let x=saved.find(v=>v.mode===c.mode);if(!x||!x.updatedAt||(Date.now()-new Date(x.updatedAt).getTime()>90000)){try{const addr=encodeURIComponent(c.host+':'+c.port),r=await fetch('https://api.mcstatus.io/v2/status/java/'+addr+'?query=false&timeout=4',{signal:AbortSignal.timeout(5500)}),d=await r.json().catch(()=>({}));x={...(x||{}),mode:c.mode,host:c.host,port:c.port,online:Boolean(d.online),version:d.version?.name_clean||c.version,players:Number(d.players?.online||0),maxPlayers:Number(d.players?.max||0),plugin:c.plugin,updatedAt:new Date().toISOString()}}catch{x={...(x||{}),mode:c.mode,host:c.host,port:c.port,online:false,version:c.version,players:0,maxPlayers:0,plugin:c.plugin,updatedAt:new Date().toISOString()}}}out.push({mode:c.mode,host:x.host||c.host,port:Number(x.port||c.port),online:Boolean(x.online),version:x.version||c.version,plugin:x.plugin||c.plugin,players:Number(x.players||0),maxPlayers:Number(x.maxPlayers||0),tps:x.tps==null?null:Number(x.tps),updatedAt:x.updatedAt})}res.json({servers:out,checkedAt:new Date().toISOString()})}catch(e){res.status(500).json({error:'Не удалось получить статус режимов'})}});
+app.post('/api/integrations/server-status',async(req,res)=>{const mode=String(req.body.mode||'').trim(),key=String(req.get('X-EPM-API-Key')||'').trim(),c=serverModeConfig(mode);if(!c||!punishmentApiKeyValid(mode,key))return res.status(401).json({error:'Недействительный API-ключ интеграции'});const tps=req.body.tps==null||req.body.tps===''?null:Number(req.body.tps),port=Number(req.body.port||c.port);if(tps!==null&&!Number.isFinite(tps)||port<1||port>65535)return res.status(400).json({error:'Некорректные данные статуса'});try{if(pool){const q=await pool.query(`INSERT INTO server_status(mode,host,port,online,version,players,max_players,tps,plugin,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW()) ON CONFLICT(mode) DO UPDATE SET host=EXCLUDED.host,port=EXCLUDED.port,online=EXCLUDED.online,version=EXCLUDED.version,players=EXCLUDED.players,max_players=EXCLUDED.max_players,tps=EXCLUDED.tps,plugin=EXCLUDED.plugin,updated_at=NOW()`,[mode,String(req.body.host||c.host),port,Boolean(req.body.online),String(req.body.version||c.version),Math.max(0,Number(req.body.players||0)),Math.max(0,Number(req.body.maxPlayers||0)),tps,c.plugin]);return res.json({ok:true})}res.json({ok:true})}catch(e){res.status(500).json({error:'Не удалось сохранить статус сервера'})}});
 
 async function createNotification({recipientId,actorId,type='system',title,body='',url=''}) {
   if(!recipientId || Number(recipientId)===Number(actorId)) return;
@@ -260,7 +229,7 @@ app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
   if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
   if(userId===Number(req.user.id))return res.status(400).json({error:'Нельзя заблокировать собственный аккаунт'});
   if(typeof req.body.blocked!=='boolean')return res.status(400).json({error:'Статус блокировки должен быть true или false'});
-  try{const user=await getUser(userId);if(!user)return res.status(404).json({error:'Пользователь не найден'});if(user.role==='Создатель')return res.status(403).json({error:'Аккаунт Создателя нельзя заблокировать'});user.blocked=req.body.blocked;await saveUser(user);res.json({user:safeUser(user)});}catch(error){console.error('Admin status error:',error);res.status(500).json({error:'Не удалось изменить статус пользователя'});}
+  try{const user=await getUser(userId);if(!user)return res.status(404).json({error:'Пользователь не найден'});if(user.role==='Создатель')return res.status(403).json({error:'Аккаунт Создателя нельзя заблокировать'});user.blocked=req.body.blocked;await saveUser(user);await createNotification({recipientId:user.id,actorId:req.user.id,type:'admin_action',title:req.body.blocked?'Аккаунт заблокирован':'Аккаунт разблокирован',body:req.body.blocked?'Ваш аккаунт заблокирован администрацией EPM.':'Ваш аккаунт разблокирован.',url:'profile.html?id='+user.id});res.json({user:safeUser(user)});}catch(error){console.error('Admin status error:',error);res.status(500).json({error:'Не удалось изменить статус пользователя'});}
 });
 app.patch('/api/admin/users/:id/role',auth,async(req,res)=>{
   if(!isCreator(req.user))return res.status(403).json({error:'Изменять роли может только Создатель'});
@@ -284,7 +253,7 @@ app.get('/api/topics/:id',async(req,res)=>{try{let topic;if(pool)topic=(await po
 app.post('/api/topics',auth,async(req,res)=>{if(!canCreateTopic(req.user))return res.status(403).json({error:'Создавать темы могут только Хелпер и выше'});const title=String(req.body.title||'').trim(),content=String(req.body.content||'').trim(),category=String(req.body.category||'Общение').trim()||'Общение';if(!title||!content)return res.status(400).json({error:'Заполни заголовок и текст темы'});try{const now=new Date().toISOString();if(pool){const result=await pool.query(`INSERT INTO topics(title,content,author,author_id,category,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt"`,[title,content,req.user.nickname,req.user.id,category,now]);await pool.query('UPDATE users SET topics=topics+1 WHERE id=$1',[req.user.id]);return res.status(201).json(result.rows[0]);}const topics=read('topics'),topic={id:nextId(topics),title,content,author:req.user.nickname,authorId:req.user.id,category,pinned:false,closed:false,views:0,repliesCount:0,createdAt:now,updatedAt:now};topics.push(topic);write('topics',topics);const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.topics=(user.topics||0)+1;write('users',users);}res.status(201).json(topic);}catch(error){console.error('Topic create error:',error);res.status(500).json({error:'Не удалось создать тему'});}});
 
 app.post('/api/topics/:id/replies',auth,async(req,res)=>{const content=String(req.body.content||'').trim();if(!content)return res.status(400).json({error:'Напиши текст ответа'});try{if(pool){const topic=(await pool.query('SELECT * FROM topics WHERE id=$1',[req.params.id])).rows[0];if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const now=new Date().toISOString();const reply=(await pool.query(`INSERT INTO replies(topic_id,content,author,author_id,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt"`,[topic.id,content,req.user.nickname,req.user.id,now])).rows[0];
-      await createNotification({recipientId:topic.author_id,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});await pool.query(`UPDATE topics SET replies_count=replies_count+1,updated_at=$2 WHERE id=$1`,[topic.id,now]);await pool.query('UPDATE users SET posts=posts+1 WHERE id=$1',[req.user.id]);return res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const replies=read('replies'),now=new Date().toISOString(),reply={id:nextId(replies),topicId:Number(topic.id),content,author:req.user.nickname,authorId:req.user.id,createdAt:now};replies.push(reply);topic.repliesCount=(topic.repliesCount||0)+1;topic.updatedAt=now;write('replies',replies);write('topics',topics);await createNotification({recipientId:topic.authorId,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.posts=(user.posts||0)+1;write('users',users);}res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}catch(error){console.error('Reply create error:',error);res.status(500).json({error:'Не удалось отправить ответ'});}});
+      await createNotification({recipientId:topic.author_id,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});await notifyMentions(content,{actorId:req.user.id,url:'topic.html?id='+topic.id,title:'Вас упомянули в теме',bodyPrefix:req.user.nickname+' упомянул(а) вас в ответе.'});await pool.query(`UPDATE topics SET replies_count=replies_count+1,updated_at=$2 WHERE id=$1`,[topic.id,now]);await pool.query('UPDATE users SET posts=posts+1 WHERE id=$1',[req.user.id]);return res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const replies=read('replies'),now=new Date().toISOString(),reply={id:nextId(replies),topicId:Number(topic.id),content,author:req.user.nickname,authorId:req.user.id,createdAt:now};replies.push(reply);topic.repliesCount=(topic.repliesCount||0)+1;topic.updatedAt=now;write('replies',replies);write('topics',topics);await createNotification({recipientId:topic.authorId,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});await notifyMentions(content,{actorId:req.user.id,url:'topic.html?id='+topic.id,title:'Вас упомянули в теме',bodyPrefix:req.user.nickname+' упомянул(а) вас в ответе.'});const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.posts=(user.posts||0)+1;write('users',users);}res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}catch(error){console.error('Reply create error:',error);res.status(500).json({error:'Не удалось отправить ответ'});}});
 
 app.patch('/api/topics/:topicId/replies/:replyId',auth,async(req,res)=>{
   const content=String(req.body.content||'').trim();if(!content||content.length>5000)return res.status(400).json({error:'Ответ должен содержать от 1 до 5000 символов'});
@@ -344,7 +313,7 @@ app.post('/api/profile/:id/messages',auth,async(req,res)=>{
     const now=new Date().toISOString();
     if(pool){
       const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);
-      await createNotification({recipientId:profileUserId,actorId:req.user.id,type:'profile_message',title:'Новое сообщение в профиле',body:req.user.nickname+' оставил(а) сообщение в вашем профиле.',url:'profile.html?id='+profileUserId});
+      await createNotification({recipientId:profileUserId,actorId:req.user.id,type:'profile_message',title:'Новое сообщение в профиле',body:req.user.nickname+' оставил(а) сообщение в вашем профиле.',url:'profile.html?id='+profileUserId});await notifyMentions(plain,{actorId:req.user.id,url:'profile.html?id='+profileUserId,title:'Вас упомянули в профиле',bodyPrefix:req.user.nickname+' упомянул(а) вас в сообщении профиля.'});
       return res.status(201).json({message:{...result.rows[0],nickname:req.user.nickname,avatar:req.user.avatar||''}});
     }
     const file=path.join(DATA_DIR,'profile_messages.json');
@@ -404,37 +373,7 @@ app.get('/api/punishments',async(req,res)=>{
 });
 
 // Машинная интеграция: Minecraft-серверы отправляют бан сюда по API-ключу Render.
-app.post('/api/integrations/punishments',async(req,res)=>{
-  const mode=String(req.body.mode||'').trim();
-  const apiKey=String(req.get('X-EPM-API-Key')||'').trim();
-  if(!PUNISHMENT_MODES.includes(mode)||!punishmentApiKeyValid(mode,apiKey))return res.status(401).json({error:'Недействительный API-ключ интеграции'});
-  const nickname=String(req.body.nickname||'').trim().slice(0,24);
-  const reason=String(req.body.reason||'Не указана').trim().slice(0,500)||'Не указана';
-  const moderator=String(req.body.moderator||'Неизвестно').trim().slice(0,64)||'Неизвестно';
-  const type=String(req.body.type||'BAN').trim().slice(0,24)||'BAN';
-  const server=String(req.body.server||mode).trim().slice(0,64)||mode;
-  const externalId=String(req.body.externalId||'').trim().slice(0,160);
-  const expiresAt=req.body.expiresAt ? new Date(req.body.expiresAt) : null;
-  if(!nickname)return res.status(400).json({error:'Не указан ник игрока'});
-  if(expiresAt && Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата окончания блокировки'});
-  try{
-    if(pool){
-      if(externalId){
-        const duplicate=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);
-        if(duplicate.rows[0])return res.json({ok:true,duplicate:true,id:duplicate.rows[0].id});
-      }
-      const result=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,type,server,externalId||null]);
-      return res.status(201).json({ok:true,punishment:result.rows[0]});
-    }
-    const file=path.join(DATA_DIR,'punishment_history.json');
-    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
-    const punishments=readJsonFile(file);
-    if(externalId){const duplicate=punishments.find(p=>p.externalId===externalId);if(duplicate)return res.json({ok:true,duplicate:true,id:duplicate.id});}
-    const punishment={id:nextId(punishments),nickname,reason,moderator,expiresAt:expiresAt?expiresAt.toISOString():null,mode,type,server,externalId:externalId||null,createdAt:new Date().toISOString()};
-    punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');
-    res.status(201).json({ok:true,punishment});
-  }catch(error){console.error('Integration punishment error:',error);res.status(500).json({error:'Не удалось сохранить блокировку'});}
-});
+app.post('/api/integrations/punishments',async(req,res)=>{const mode=String(req.body.mode||'').trim(),key=String(req.get('X-EPM-API-Key')||'').trim(),type=String(req.body.type||'BAN').trim().toUpperCase();if(!PUNISHMENT_MODES.includes(mode)||!punishmentApiKeyValid(mode,key))return res.status(401).json({error:'Недействительный API-ключ интеграции'});const nickname=String(req.body.nickname||'').trim().slice(0,24),reason=String(req.body.reason||'Не указана').trim().slice(0,500)||'Не указана',moderator=String(req.body.moderator||'Неизвестно').trim().slice(0,64)||'Неизвестно',serverName=String(req.body.server||mode).trim().slice(0,64)||mode,externalId=String(req.body.externalId||'').trim().slice(0,160),expiresAt=req.body.expiresAt?new Date(req.body.expiresAt):null;if(!nickname)return res.status(400).json({error:'Не указан ник игрока'});if(expiresAt&&Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата окончания'});try{if(!pool)return res.status(503).json({error:'Интеграция требует PostgreSQL'});if(externalId&&type==='BAN'){const d=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);if(d.rows[0])return res.json({ok:true,duplicate:true,id:d.rows[0].id})}if(type==='UNBAN'){const p=externalId?(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE external_id=$1',[externalId])).rows[0]:(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE nickname=$1 AND mode=$2 ORDER BY created_at DESC LIMIT 1',[nickname,mode])).rows[0];if(!p)return res.status(404).json({error:'Исходная блокировка не найдена'});const d=await pool.query('SELECT id FROM unban_history WHERE punishment_id=$1',[p.id]);if(d.rows[0])return res.json({ok:true,duplicate:true,id:d.rows[0].id});const u=await pool.query('INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[p.id,nickname,moderator,reason,mode,serverName]);return res.status(201).json({ok:true,unbanId:u.rows[0].id})}const q=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,'BAN',$6,$7,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,serverName,externalId||null]);res.status(201).json({ok:true,punishment:q.rows[0]})}catch(e){console.error('Integration punishment error:',e);res.status(500).json({error:'Не удалось сохранить блокировку'})}});
 
 app.post('/api/punishments',auth,async(req,res)=>{
   if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Добавлять блокировки могут только Ст.Модератор и выше'});
@@ -452,6 +391,9 @@ app.post('/api/punishments',auth,async(req,res)=>{
     punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');res.status(201).json({punishment});
   }catch(error){console.error('Punishment create error:',error);res.status(500).json({error:'Не удалось добавить блокировку'});}
 });
+
+app.patch('/api/punishments/:id',auth,async(req,res)=>{if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Редактировать блокировки могут только Ст.Модератор и выше'});const id=Number(req.params.id),reason=String(req.body.reason||'').trim().slice(0,500),mode=String(req.body.mode||'').trim().slice(0,64),expiresAt=req.body.expiresAt?new Date(req.body.expiresAt):null;if(!Number.isSafeInteger(id)||id<1||!reason||!mode)return res.status(400).json({error:'Некорректные данные'});if(expiresAt&&Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата'});try{if(!pool)return res.status(503).json({error:'Редактирование доступно при PostgreSQL'});const q=await pool.query(`UPDATE punishment_history SET reason=$2,mode=$3,expires_at=$4 WHERE id=$1 RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[id,reason,mode,expiresAt?expiresAt.toISOString():null]);if(!q.rows[0])return res.status(404).json({error:'Блокировка не найдена'});res.json({punishment:q.rows[0]})}catch(e){res.status(500).json({error:'Не удалось изменить блокировку'})}});
+app.post('/api/punishments/:id/unban',auth,async(req,res)=>{if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Разблокировать могут только Ст.Модератор и выше'});const id=Number(req.params.id);try{if(!pool)return res.status(503).json({error:'Разблокировка доступна при PostgreSQL'});const p=(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE id=$1',[id])).rows[0];if(!p)return res.status(404).json({error:'Блокировка не найдена'});const d=await pool.query('SELECT id FROM unban_history WHERE punishment_id=$1',[id]);if(d.rows[0])return res.json({ok:true,duplicate:true});const q=await pool.query('INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[id,p.nickname,req.user.nickname,'Разблокировка модератором EPM',p.mode,p.server]);res.status(201).json({ok:true,unbanId:q.rows[0].id})}catch(e){res.status(500).json({error:'Не удалось оформить разблокировку'})}});
 
 app.get('/api/news',async(req,res)=>{
   try{

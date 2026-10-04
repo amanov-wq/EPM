@@ -39,7 +39,7 @@
 <button class="copy-ip-btn" id="copyIp" type="button">Скопировать IP</button>
 <div class="copy-ip-status" id="copyStatus"></div>
 </div>
-<div class="server-modes"><article class="server-mode"><small>MODE 01 · 1.19.4</small><h3>Estamon Grief</h3><p>Paper · AdvancedBan · Grief</p></article><article class="server-mode"><small>MODE 02 · 1.21.4</small><h3>Estamon Creative</h3><p>Paper · Essentials · Creative</p></article><article class="server-mode"><small>MODE 03 · 1.16.5</small><h3>Estamon Survial</h3><p>Paper · Essentials · Survival</p></article></div><div class="server-platforms">
+<div class="server-modes" id="serverModes"><div class="server-mode"><small>MODE 01</small><h3>Estamon Grief</h3><p>Загрузка статуса…</p></div><div class="server-mode"><small>MODE 02</small><h3>Estamon Creative</h3><p>Загрузка статуса…</p></div><div class="server-mode"><small>MODE 03</small><h3>Estamon Survial</h3><p>Загрузка статуса…</p></div></div><div class="server-platforms">
 <div class="platform"><div class="platform-head"><h2>☕ Java Edition</h2><span id="javaBadge" class="platform-badge">Проверка</span></div><p id="javaInfo">Проверяем подключение Java-сервера...</p></div>
 <div class="platform"><div class="platform-head"><h2>📱 Bedrock Edition</h2><span id="bedrockBadge" class="platform-badge">Проверка</span></div><p id="bedrockInfo">Проверяем подключение Bedrock-сервера...</p></div>
 </div>
@@ -50,78 +50,13 @@
 </main>
 <footer class="site-footer">EPM © 2026</footer>
 <script>
-async function loadServerStatus(){
-  const status=document.getElementById('status');
-  const javaBadge=document.getElementById('javaBadge');
-  const javaInfo=document.getElementById('javaInfo');
-  const bedrockBadge=document.getElementById('bedrockBadge');
-  const bedrockInfo=document.getElementById('bedrockInfo');
-  const error=document.getElementById('error');
-  const updated=document.getElementById('updated');
-  const refresh=document.getElementById('refresh');
-
-  refresh.disabled=true;
-  refresh.textContent='Проверка...';
-  error.style.display='none';
-
-  try{
-    const response=await fetch('/api/server-status',{cache:'no-store'});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(data.error||'Не удалось получить статус');
-
-    status.classList.toggle('online',Boolean(data.online));
-    status.classList.toggle('offline',!data.online);
-    status.querySelector('span').textContent=data.online?'Онлайн':'Оффлайн';
-
-    const java=data.java||{online:Boolean(data.online),version:data.version,players:data.players,maxPlayers:data.maxPlayers};
-    const bedrock=data.bedrock||{online:false};
-    javaBadge.textContent=java.online?'Онлайн':'Оффлайн';
-    javaInfo.textContent=java.online
-      ? 'Сервер доступен · '+(java.version||'Версия определяется автоматически')+' · '+Number(java.players||0)+' / '+Number(java.maxPlayers||0)+' игроков'
-      : 'Java-сервер сейчас недоступен.';
-    bedrockBadge.textContent=bedrock.online?'Онлайн':'Оффлайн';
-    bedrockInfo.textContent=bedrock.online
-      ? 'Bedrock-соединение доступно · '+(bedrock.version||'Версия определяется автоматически')+' · '+Number(bedrock.players||0)+' / '+Number(bedrock.maxPlayers||0)+' игроков'
-      : 'Bedrock-соединение на указанном адресе/порту не отвечает.';
-
-    updated.textContent='Последняя проверка: '+new Date(data.checkedAt||Date.now()).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }catch(e){
-    status.classList.remove('online');
-    status.classList.add('offline');
-    status.querySelector('span').textContent='Ошибка проверки';
-    javaBadge.textContent='Ошибка';
-    bedrockBadge.textContent='Ошибка';
-    javaInfo.textContent='Не удалось получить актуальный статус сервера.';
-    bedrockInfo.textContent='Не удалось получить актуальный статус сервера.';
-    error.textContent=e.message||'Не удалось проверить сервер';
-    error.style.display='block';
-    updated.textContent='Последняя проверка: ошибка';
-  }finally{
-    refresh.disabled=false;
-    refresh.textContent='↻ Обновить';
-  }
-}
-
-document.getElementById('refresh').addEventListener('click',loadServerStatus);
-loadServerStatus();
-setInterval(loadServerStatus,30000);
-
-const copyButton = document.getElementById('copyIp');
-const copyStatus = document.getElementById('copyStatus');
-copyButton.addEventListener('click', async () => {
-  try {
-    await navigator.clipboard.writeText('EstamonHost.ru');
-    copyButton.textContent = '✓ IP скопирован';
-    copyStatus.textContent = 'EstamonHost.ru скопирован в буфер обмена';
-  } catch {
-    copyStatus.textContent = 'Не удалось скопировать автоматически';
-  }
-  setTimeout(() => {
-    copyButton.textContent = 'Скопировать IP';
-    copyStatus.textContent = '';
-  }, 2200);
-});
-</script>
+function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function renderModes(a){const r=document.getElementById('serverModes');r.innerHTML=(a||[]).map((x,i)=>'<article class="server-mode"><small>MODE 0'+(i+1)+' · '+escapeHtml(x.version||'')+'</small><h3>'+escapeHtml(x.mode)+'</h3><p><b>'+ (x.online?'● Онлайн':'● Оффлайн')+'</b> · '+Number(x.players||0)+' / '+Number(x.maxPlayers||0)+' игроков · TPS '+(x.tps==null?'—':Number(x.tps).toFixed(1))+'<br>'+escapeHtml(x.plugin||'')+' · '+escapeHtml(x.host||'EstamonHost.ru')+':'+Number(x.port||25565)+'</p></article>').join('')}
+async function loadModes(){try{const r=await fetch('/api/servers-status',{cache:'no-store'}),d=await r.json();if(r.ok)renderModes(d.servers)}catch{}}
+async function loadServerStatus(){const st=document.getElementById('status'),jb=document.getElementById('javaBadge'),ji=document.getElementById('javaInfo'),bb=document.getElementById('bedrockBadge'),bi=document.getElementById('bedrockInfo'),err=document.getElementById('error'),up=document.getElementById('updated'),ref=document.getElementById('refresh');ref.disabled=true;ref.textContent='Проверка...';try{const r=await fetch('/api/server-status',{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Ошибка');st.classList.toggle('online',d.online);st.classList.toggle('offline',!d.online);st.querySelector('span').textContent=d.online?'Онлайн':'Оффлайн';const j=d.java||{},b=d.bedrock||{};jb.textContent=j.online?'Онлайн':'Оффлайн';ji.textContent=j.online?(j.version||'Версия')+' · '+Number(j.players||0)+' / '+Number(j.maxPlayers||0)+' игроков':'Java-сервер недоступен';bb.textContent=b.online?'Онлайн':'Оффлайн';bi.textContent=b.online?(b.version||'Версия')+' · '+Number(b.players||0)+' / '+Number(b.maxPlayers||0)+' игроков':'Bedrock-соединение недоступно';err.style.display='none';up.textContent='Последняя проверка: '+new Date(d.checkedAt||Date.now()).toLocaleTimeString('ru-RU');await loadModes()}catch(e){st.classList.remove('online');st.classList.add('offline');st.querySelector('span').textContent='Ошибка';err.textContent=e.message;err.style.display='block'}finally{ref.disabled=false;ref.textContent='↻ Обновить'}}
+document.getElementById('refresh').onclick=loadServerStatus;loadServerStatus();setInterval(loadServerStatus,30000);
+const copyButton=document.getElementById('copyIp'),copyStatus=document.getElementById('copyStatus');copyButton.onclick=async()=>{try{await navigator.clipboard.writeText('EstamonHost.ru');copyButton.textContent='✓ IP скопирован';copyStatus.textContent='EstamonHost.ru скопирован'}catch{copyStatus.textContent='Не удалось скопировать'}setTimeout(()=>{copyButton.textContent='Скопировать IP';copyStatus.textContent=''},2200)};
+</script></script>
 <script src="auth.js"></script>
 </body>
 </html>

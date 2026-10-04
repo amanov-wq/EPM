@@ -1,0 +1,11 @@
+// EPM Minecraft Bridge — Node.js 18+, no dependencies.
+const fs=require('fs'),path=require('path'),{execFile}=require('child_process');
+const API=(process.env.EPM_URL||'https://epmofficial.onrender.com').replace(/\/$/,'');
+const MODE=process.env.EPM_MODE||'Estamon Grief',KEY=process.env.EPM_API_KEY||'',ROOT=process.env.EPM_SERVER_ROOT||process.cwd();
+const FILE=process.env.EPM_SOURCE_FILE||path.join(ROOT,'banned-players.json'),CMD=process.env.EPM_SOURCE_COMMAND||'',POLL=Math.max(5000,Number(process.env.EPM_POLL_MS||15000)),seen=new Map();
+function expiry(v){if(!v||/^(forever|permanent)$/i.test(String(v)))return null;const d=new Date(v);return Number.isNaN(d.getTime())?null:d.toISOString()}
+function read(){if(!CMD){try{return Promise.resolve(JSON.parse(fs.readFileSync(FILE,'utf8')))}catch{return Promise.resolve([])}}return new Promise(ok=>execFile(process.env.ComSpec||'sh',['-c',CMD],{cwd:ROOT,maxBuffer:2000000},(e,o)=>{if(e)return ok([]);try{ok(JSON.parse(o))}catch{ok([])}}))}
+function normalize(a){if(a&&Array.isArray(a.punishments))a=a.punishments;if(!Array.isArray(a))return [];return a.map((x,i)=>({id:String(x.id||x.uuid||x.uniqueId||x.name||i),nickname:String(x.name||x.nickname||x.player||''),reason:String(x.reason||'Не указана'),moderator:String(x.source||x.moderator||x.by||'Неизвестно'),expiresAt:expiry(x.expires||x.expiresAt)})).filter(x=>x.nickname)}
+async function send(p){const r=await fetch(API+'/api/integrations/punishments',{method:'POST',headers:{'Content-Type':'application/json','X-EPM-API-Key':KEY},body:JSON.stringify({...p,mode:MODE,server:MODE})});if(!r.ok)throw new Error(await r.text())}
+async function sync(){const cur=new Map(normalize(await read()).map(x=>[x.id,x]));for(const [id,p] of cur)if(!seen.has(id)){await send({type:'BAN',...p,externalId:MODE+':'+id});seen.set(id,p)}for(const [id,p] of seen)if(!cur.has(id)){await send({type:'UNBAN',nickname:p.nickname,reason:'Блокировка снята на сервере',moderator:'Minecraft',externalId:MODE+':'+id});seen.delete(id)}}
+async function tick(){try{await sync();console.log('[EPM] sync OK',MODE)}catch(e){console.error('[EPM] sync error',e.message)}}tick();setInterval(tick,POLL);
