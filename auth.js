@@ -1,5 +1,5 @@
 document.documentElement.classList.add('epm-auth-ready');
-const STANDARD_NAV=[['index.html','Главная'],['forum.html','Форум'],['news.html','Новости'],['rules.html','Правила'],['donate.html','Донат'],['punishments.html','Блокировки'],['server-info.html','Сервер']];
+const STANDARD_NAV=[['index.html','Главная'],['forum.html','Форум'],['news.html','Новости'],['rules.html','Правила'],['donate.html','Донат'],['punishments.html','Блокировки'],['server-info.html','Сервер'],['search.html','Поиск']];
 const TOKEN_KEY='epmToken',USER_KEY='epmUser';
 function getToken(){return localStorage.getItem(TOKEN_KEY)||''}
 function getUser(){try{return JSON.parse(localStorage.getItem(USER_KEY)||'null')}catch{return null}}
