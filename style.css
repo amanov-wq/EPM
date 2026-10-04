@@ -41,3 +41,7 @@ body{background:var(--epm-bg);color:var(--epm-text)}
   footer,.site-footer{padding:22px 12px;font-size:11px}
 }
 @media(max-width:380px){.account-links a{padding:7px 8px;font-size:9px}.topbar nav a{padding:7px 8px}.profile-stats{gap:5px}.profile-stat{padding:9px 4px}.profile-stat b{font-size:14px}}
+
+/* Prevent the guest auth links from flashing before auth.js restores the saved session. */
+.account-links{visibility:hidden}.epm-auth-ready .account-links{visibility:visible}
+.epm-search-nav{flex:0 0 auto}
