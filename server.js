@@ -167,7 +167,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
   if(pool){const result=await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1)',[nickname]);existing=result.rows[0]||null;}else existing=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(existing)return res.status(409).json({error:'Такой ник уже зарегистрирован'});
   let id;if(pool){const result=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(result.rows[0].id);}else id=nextId(read('users'));
-  const user={id,nickname,password:hash(password),role:'Пользователь',description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,experience:0,blocked:false,createdAt:new Date().toISOString()};
+  const user={id,nickname,password:hash(password),role:'Создатель',description:'Новый участник EPM',avatar:'',posts:0,topics:0,level:1,experience:0,blocked:false,createdAt:new Date().toISOString()};
   await saveUser(user);res.status(201).json({token:makeToken(id),user:safeUser(user)});
 }catch(error){console.error('Register error:',error);res.status(500).json({error:'Ошибка регистрации'});}});
 
@@ -176,6 +176,7 @@ app.post('/api/auth/login',async(req,res)=>{try{
   if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(!user||user.password!==password)return res.status(401).json({error:'Неверный ник или пароль'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
+  user.role='Создатель';
   await saveUser(user);
   res.json({token:makeToken(user.id),user:safeUser(user)});
 }catch(error){console.error('Login error:',error);res.status(500).json({error:'Ошибка входа'});}});
