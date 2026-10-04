@@ -164,23 +164,6 @@ app.get('/api/server-status', async (req, res) => {
       motd:java.motd?.clean||bedrock.motd?.clean||'',
       gamemode:java.gamemode||bedrock.gamemode||'Survival',
       checkedAt:new Date().toISOString()
-    });;
-    const raw = await response.text();
-    let data = {};
-    try { data = JSON.parse(raw); } catch {}
-    if (!response.ok) throw new Error(data.error || raw || `status API HTTP ${response.status}`);
-
-    res.json({
-      host,
-      port,
-      online: Boolean(data.online),
-      version: data.version?.name_clean || data.version?.name_raw || null,
-      protocol: data.version?.protocol || null,
-      players: Number(data.players?.online ?? 0),
-      maxPlayers: Number(data.players?.max ?? 0),
-      motd: data.motd?.clean || '',
-      gamemode: data.gamemode || 'Survival',
-      checkedAt: new Date().toISOString()
     });
   } catch (error) {
     console.error('Server status error:', error);
@@ -195,6 +178,15 @@ app.get('/api/server-status', async (req, res) => {
   }
 });
 
+async function createNotification({recipientId,actorId,type='system',title,body='',url=''}) {
+  if(!recipientId || Number(recipientId)===Number(actorId)) return;
+  try{
+    if(pool){await pool.query(`INSERT INTO notifications(recipient_id,actor_id,type,title,body,url) VALUES($1,$2,$3,$4,$5,$6)`,[recipientId,actorId||null,type,String(title||'EPM').slice(0,160),String(body||'').slice(0,500),String(url||'').slice(0,300)]);return;}
+    global.__epmNotifications=global.__epmNotifications||[];
+    global.__epmNotifications.unshift({id:Date.now()+Math.random(),recipientId:Number(recipientId),actorId:actorId?Number(actorId):null,type,title,body,url,isRead:false,createdAt:new Date().toISOString()});
+    global.__epmNotifications=global.__epmNotifications.slice(0,1000);
+  }catch(error){console.error('Notification create error:',error);}
+}
 app.get('/api/health',(req,res)=>res.json({ok:true,project:'EPM',database:Boolean(pool)}));
 app.get('/api/roles',(req,res)=>res.json({roles:ROLES,topicCreationFrom:'Хелпер'}));
 
@@ -221,6 +213,21 @@ app.post('/api/auth/login',async(req,res)=>{try{
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
 app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
 
+app.get('/api/notifications',auth,async(req,res)=>{
+  try{
+    if(pool){
+      const result=await pool.query(`SELECT n.id,n.type,n.title,n.body,n.url,n.is_read AS "isRead",n.created_at AS "createdAt",u.id AS "actorId",u.nickname AS "actorNickname",u.avatar AS "actorAvatar" FROM notifications n LEFT JOIN users u ON u.id=n.actor_id WHERE n.recipient_id=$1 ORDER BY n.created_at DESC,n.id DESC LIMIT 50`,[req.user.id]);
+      const unread=await pool.query('SELECT COUNT(*)::int AS count FROM notifications WHERE recipient_id=$1 AND is_read=FALSE',[req.user.id]);
+      return res.json({notifications:result.rows,unread:Number(unread.rows[0]?.count||0)});
+    }
+    const rows=(global.__epmNotifications||[]).filter(n=>Number(n.recipientId)===Number(req.user.id)).slice(0,50);
+    res.json({notifications:rows,unread:rows.filter(n=>!n.isRead).length});
+  }catch(error){console.error('Notifications load error:',error);res.status(500).json({error:'Не удалось загрузить уведомления'});}
+});
+app.post('/api/notifications/read',auth,async(req,res)=>{
+  try{if(pool)await pool.query('UPDATE notifications SET is_read=TRUE WHERE recipient_id=$1',[req.user.id]);else(global.__epmNotifications||[]).forEach(n=>{if(Number(n.recipientId)===Number(req.user.id))n.isRead=true});res.json({ok:true});
+  }catch(error){res.status(500).json({error:'Не удалось отметить уведомления'});}
+});
 app.get('/api/profile/:id',async(req,res)=>{try{const profileId=Number(req.params.id);if(!Number.isSafeInteger(profileId)||profileId<1)return res.status(400).json({error:'Некорректный пользователь'});const user=await getUser(profileId);if(!user)return res.status(404).json({error:'Пользователь не найден'});res.json({user:safeUser(user)});}catch(error){console.error('Profile error:',error);res.status(500).json({error:'Ошибка загрузки профиля'});}});
 app.patch('/api/profile',auth,async(req,res)=>{try{req.user.description=String(req.body.description??req.user.description??'').slice(0,500);req.user.avatar=String(req.body.avatar??req.user.avatar??'').slice(0,2000000);await saveUser(req.user);res.json({user:safeUser(req.user)});}catch(error){console.error('Profile update error:',error);res.status(500).json({error:'Не удалось сохранить профиль'});}});
 app.patch('/api/profile/password',auth,async(req,res)=>{try{const currentPassword=String(req.body.currentPassword||''),newPassword=String(req.body.newPassword||''),confirmPassword=String(req.body.confirmPassword||'');if(!currentPassword)return res.status(400).json({error:'Введите текущий пароль'});if(newPassword.length<6)return res.status(400).json({error:'Новый пароль должен быть не короче 6 символов'});if(newPassword!==confirmPassword)return res.status(400).json({error:'Новые пароли не совпадают'});if(hash(currentPassword)!==req.user.password)return res.status(400).json({error:'Текущий пароль указан неверно'});if(hash(newPassword)===req.user.password)return res.status(400).json({error:'Новый пароль должен отличаться от текущего'});req.user.password=hash(newPassword);await saveUser(req.user);res.json({ok:true});}catch(error){console.error('Password update error:',error);res.status(500).json({error:'Не удалось изменить пароль'});}});
@@ -276,8 +283,22 @@ app.get('/api/topics/:id',async(req,res)=>{try{let topic;if(pool)topic=(await po
 
 app.post('/api/topics',auth,async(req,res)=>{if(!canCreateTopic(req.user))return res.status(403).json({error:'Создавать темы могут только Хелпер и выше'});const title=String(req.body.title||'').trim(),content=String(req.body.content||'').trim(),category=String(req.body.category||'Общение').trim()||'Общение';if(!title||!content)return res.status(400).json({error:'Заполни заголовок и текст темы'});try{const now=new Date().toISOString();if(pool){const result=await pool.query(`INSERT INTO topics(title,content,author,author_id,category,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$6) RETURNING id,title,content,author,author_id AS "authorId",category,pinned,closed,views,replies_count AS "repliesCount",created_at AS "createdAt",updated_at AS "updatedAt"`,[title,content,req.user.nickname,req.user.id,category,now]);await pool.query('UPDATE users SET topics=topics+1 WHERE id=$1',[req.user.id]);return res.status(201).json(result.rows[0]);}const topics=read('topics'),topic={id:nextId(topics),title,content,author:req.user.nickname,authorId:req.user.id,category,pinned:false,closed:false,views:0,repliesCount:0,createdAt:now,updatedAt:now};topics.push(topic);write('topics',topics);const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.topics=(user.topics||0)+1;write('users',users);}res.status(201).json(topic);}catch(error){console.error('Topic create error:',error);res.status(500).json({error:'Не удалось создать тему'});}});
 
-app.post('/api/topics/:id/replies',auth,async(req,res)=>{const content=String(req.body.content||'').trim();if(!content)return res.status(400).json({error:'Напиши текст ответа'});try{if(pool){const topic=(await pool.query('SELECT * FROM topics WHERE id=$1',[req.params.id])).rows[0];if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const now=new Date().toISOString();const reply=(await pool.query(`INSERT INTO replies(topic_id,content,author,author_id,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt"`,[topic.id,content,req.user.nickname,req.user.id,now])).rows[0];await pool.query(`UPDATE topics SET replies_count=replies_count+1,updated_at=$2 WHERE id=$1`,[topic.id,now]);await pool.query('UPDATE users SET posts=posts+1 WHERE id=$1',[req.user.id]);return res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const replies=read('replies'),now=new Date().toISOString(),reply={id:nextId(replies),topicId:Number(topic.id),content,author:req.user.nickname,authorId:req.user.id,createdAt:now};replies.push(reply);topic.repliesCount=(topic.repliesCount||0)+1;topic.updatedAt=now;write('replies',replies);write('topics',topics);const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.posts=(user.posts||0)+1;write('users',users);}res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}catch(error){console.error('Reply create error:',error);res.status(500).json({error:'Не удалось отправить ответ'});}});
+app.post('/api/topics/:id/replies',auth,async(req,res)=>{const content=String(req.body.content||'').trim();if(!content)return res.status(400).json({error:'Напиши текст ответа'});try{if(pool){const topic=(await pool.query('SELECT * FROM topics WHERE id=$1',[req.params.id])).rows[0];if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const now=new Date().toISOString();const reply=(await pool.query(`INSERT INTO replies(topic_id,content,author,author_id,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt"`,[topic.id,content,req.user.nickname,req.user.id,now])).rows[0];
+      await createNotification({recipientId:topic.author_id,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});await pool.query(`UPDATE topics SET replies_count=replies_count+1,updated_at=$2 WHERE id=$1`,[topic.id,now]);await pool.query('UPDATE users SET posts=posts+1 WHERE id=$1',[req.user.id]);return res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});if(topic.closed)return res.status(403).json({error:'Тема закрыта'});const replies=read('replies'),now=new Date().toISOString(),reply={id:nextId(replies),topicId:Number(topic.id),content,author:req.user.nickname,authorId:req.user.id,createdAt:now};replies.push(reply);topic.repliesCount=(topic.repliesCount||0)+1;topic.updatedAt=now;write('replies',replies);write('topics',topics);await createNotification({recipientId:topic.authorId,actorId:req.user.id,type:'topic_reply',title:'Новый ответ в вашей теме',body:req.user.nickname+' ответил(а) в теме «'+String(topic.title||'').slice(0,120)+'».',url:'topic.html?id='+topic.id});const users=read('users'),user=users.find(i=>Number(i.id)===Number(req.user.id));if(user){user.posts=(user.posts||0)+1;write('users',users);}res.status(201).json({...reply,authorProfile:publicAuthor(req.user)});}catch(error){console.error('Reply create error:',error);res.status(500).json({error:'Не удалось отправить ответ'});}});
 
+app.patch('/api/topics/:topicId/replies/:replyId',auth,async(req,res)=>{
+  const content=String(req.body.content||'').trim();if(!content||content.length>5000)return res.status(400).json({error:'Ответ должен содержать от 1 до 5000 символов'});
+  try{
+    if(pool){const row=(await pool.query('SELECT id,author_id AS "authorId" FROM replies WHERE id=$1 AND topic_id=$2',[req.params.replyId,req.params.topicId])).rows[0];if(!row)return res.status(404).json({error:'Ответ не найден'});if(Number(row.authorId)!==Number(req.user.id)&&!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});const result=await pool.query('UPDATE replies SET content=$1 WHERE id=$2 RETURNING id,topic_id AS "topicId",content,author,author_id AS "authorId",created_at AS "createdAt"',[content,row.id]);return res.json({reply:result.rows[0]});}
+    const rows=read('replies'),row=rows.find(r=>Number(r.id)===Number(req.params.replyId)&&Number(r.topicId)===Number(req.params.topicId));if(!row)return res.status(404).json({error:'Ответ не найден'});if(Number(row.authorId)!==Number(req.user.id)&&!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});row.content=content;write('replies',rows);res.json({reply:row});
+  }catch(error){console.error('Reply edit error:',error);res.status(500).json({error:'Не удалось изменить ответ'});}
+});
+app.delete('/api/topics/:topicId/replies/:replyId',auth,async(req,res)=>{
+  try{
+    if(pool){const row=(await pool.query('SELECT id,author_id AS "authorId" FROM replies WHERE id=$1 AND topic_id=$2',[req.params.replyId,req.params.topicId])).rows[0];if(!row)return res.status(404).json({error:'Ответ не найден'});if(Number(row.authorId)!==Number(req.user.id)&&!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});await pool.query('DELETE FROM replies WHERE id=$1',[row.id]);await pool.query('UPDATE topics SET replies_count=GREATEST(replies_count-1,0),updated_at=NOW() WHERE id=$1',[req.params.topicId]);await pool.query('UPDATE users SET posts=GREATEST(posts-1,0) WHERE id=$1',[row.authorId]);return res.json({ok:true});}
+    const rows=read('replies'),row=rows.find(r=>Number(r.id)===Number(req.params.replyId)&&Number(r.topicId)===Number(req.params.topicId));if(!row)return res.status(404).json({error:'Ответ не найден'});if(Number(row.authorId)!==Number(req.user.id)&&!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});write('replies',rows.filter(r=>Number(r.id)!==Number(row.id)));const topics=read('topics'),topic=topics.find(x=>Number(x.id)===Number(req.params.topicId));if(topic){topic.repliesCount=Math.max(0,(topic.repliesCount||0)-1);topic.updatedAt=new Date().toISOString();write('topics',topics);}const users=read('users'),u=users.find(x=>Number(x.id)===Number(row.authorId));if(u){u.posts=Math.max(0,(u.posts||0)-1);write('users',users);}res.json({ok:true});
+  }catch(error){console.error('Reply delete error:',error);res.status(500).json({error:'Не удалось удалить ответ'});}
+});
 app.post('/api/topics/:id/pin',auth,async(req,res)=>{if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});try{if(pool){const result=await pool.query('UPDATE topics SET pinned=NOT pinned,updated_at=$2 WHERE id=$1 RETURNING pinned',[req.params.id,new Date().toISOString()]);if(!result.rows[0])return res.status(404).json({error:'Тема не найдена'});return res.json({ok:true,pinned:result.rows[0].pinned});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});topic.pinned=!topic.pinned;topic.updatedAt=new Date().toISOString();write('topics',topics);res.json({ok:true,pinned:topic.pinned});}catch(error){console.error('Topic pin error:',error);res.status(500).json({error:'Не удалось изменить закрепление'});}});
 app.post('/api/topics/:id/close',auth,async(req,res)=>{if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});try{const now=new Date().toISOString();if(pool){const result=await pool.query('UPDATE topics SET closed=true,updated_at=$2 WHERE id=$1 RETURNING closed',[req.params.id,now]);if(!result.rows[0])return res.status(404).json({error:'Тема не найдена'});return res.json({ok:true,closed:true});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});topic.closed=true;topic.updatedAt=now;write('topics',topics);res.json({ok:true,closed:true});}catch(error){console.error('Topic close error:',error);res.status(500).json({error:'Не удалось закрыть тему'});}});
 app.post('/api/topics/:id/open',auth,async(req,res)=>{if(!isStaff(req.user))return res.status(403).json({error:'Недостаточно прав'});try{const now=new Date().toISOString();if(pool){const result=await pool.query('UPDATE topics SET closed=false,updated_at=$2 WHERE id=$1 RETURNING closed',[req.params.id,now]);if(!result.rows[0])return res.status(404).json({error:'Тема не найдена'});return res.json({ok:true,closed:false});}const topics=read('topics'),topic=topics.find(i=>String(i.id)===String(req.params.id));if(!topic)return res.status(404).json({error:'Тема не найдена'});topic.closed=false;topic.updatedAt=now;write('topics',topics);res.json({ok:true,closed:false});}catch(error){console.error('Topic open error:',error);res.status(500).json({error:'Не удалось открыть тему'});}});
@@ -323,12 +344,13 @@ app.post('/api/profile/:id/messages',auth,async(req,res)=>{
     const now=new Date().toISOString();
     if(pool){
       const result=await pool.query(`INSERT INTO profile_messages(profile_user_id,author_id,author,content,created_at) VALUES($1,$2,$3,$4,$5) RETURNING id,profile_user_id AS "profileUserId",author_id AS "authorId",author,content,created_at AS "createdAt"`,[profileUserId,req.user.id,req.user.nickname,content,now]);
+      await createNotification({recipientId:profileUserId,actorId:req.user.id,type:'profile_message',title:'Новое сообщение в профиле',body:req.user.nickname+' оставил(а) сообщение в вашем профиле.',url:'profile.html?id='+profileUserId});
       return res.status(201).json({message:{...result.rows[0],nickname:req.user.nickname,avatar:req.user.avatar||''}});
     }
     const file=path.join(DATA_DIR,'profile_messages.json');
     if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
     const messages=JSON.parse(fs.readFileSync(file,'utf8')),message={id:nextId(messages),profileUserId,authorId:req.user.id,author:req.user.nickname,nickname:req.user.nickname,avatar:req.user.avatar||'',content,createdAt:now};
-    messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');res.status(201).json({message});
+    messages.push(message);fs.writeFileSync(file,JSON.stringify(messages,null,2),'utf8');await createNotification({recipientId:profileUserId,actorId:req.user.id,type:'profile_message',title:'Новое сообщение в профиле',body:req.user.nickname+' оставил(а) сообщение в вашем профиле.',url:'profile.html?id='+profileUserId});res.status(201).json({message});
   }catch(error){console.error('Profile message create error:',error);res.status(500).json({error:'Не удалось отправить сообщение'});}
 });
 app.delete('/api/profile/:profileId/messages/:messageId',auth,async(req,res)=>{

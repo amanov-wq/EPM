@@ -21,10 +21,10 @@
   <div class="pun-actions">
     <button class="pun-btn secondary tab active" data-tab="bans">🔨 Блокировки</button>
     <button class="pun-btn secondary tab" data-tab="unbans">🔓 Разблокировки</button>
-    <button class="pun-btn secondary" id="refreshBtn">↻ Обновить</button>
+    <button class="pun-btn secondary" id="refreshBtn">↻ Обновить</button><button class="pun-btn" id="addBtn" style="display:none">＋ Добавить</button>
     </div>
   <div class="pun-search"><span>⌕</span><input id="search" placeholder="Поиск по нику, причине, модератору или режиму..." autocomplete="off"></div>
-</section>
+<div id="manualForm" class="modal"><div class="modal-box"><div class="eyebrow">EPM STAFF</div><h2>Добавить блокировку</h2><div class="form-row"><label>Игрок</label><input id="punNick" maxlength="24"></div><div class="form-row"><label>Причина</label><textarea id="punReason" maxlength="500"></textarea></div><div class="form-row"><label>Режим</label><select id="punMode"><option>Estamon Grief</option><option>Estamon Creative</option><option>Estamon Survial</option><option>Blood Shed World</option></select></div><div class="form-error" id="punError"></div><div class="modal-actions"><button class="pun-btn" id="savePun">Сохранить</button><button class="pun-btn secondary" id="cancelPun">Отмена</button></div></div></div></section>
 <section class="pun-list" id="list"><div class="pun-empty">Загрузка...</div></section>
 </main>
 <footer class="site-footer">EPM © 2026 · Minecraft Community</footer>
@@ -63,6 +63,9 @@ async function load(){
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{tab=btn.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));render()});
 document.getElementById('search').oninput=render;
 document.getElementById('refreshBtn').onclick=load;
+const manual=document.getElementById('manualForm'),addBtn=document.getElementById('addBtn'),savePun=document.getElementById('savePun'),cancelPun=document.getElementById('cancelPun');
+(async()=>{try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}});const d=await r.json();if(roles.indexOf(d.user?.role||'Пользователь')>=8)addBtn.style.display='inline-flex'}catch{} })();
+addBtn.onclick=()=>manual.classList.add('show');cancelPun.onclick=()=>manual.classList.remove('show');savePun.onclick=async()=>{const err=document.getElementById('punError');err.textContent='';savePun.disabled=true;try{const r=await fetch('/api/punishments',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({nickname:document.getElementById('punNick').value.trim(),reason:document.getElementById('punReason').value.trim(),mode:document.getElementById('punMode').value})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Ошибка');manual.classList.remove('show');document.getElementById('punNick').value='';document.getElementById('punReason').value='';await load()}catch(e){err.textContent=e.message}finally{savePun.disabled=false}};
 load();
 </script><script src="auth.js"></script>
 </body></html>
