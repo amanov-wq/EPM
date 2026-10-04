@@ -327,13 +327,26 @@
     const logoutButton=document.getElementById('logout');
     const avatarChange=document.querySelector('.avatar-change');
     const avatarFile=document.getElementById('avatarInput');
-    if(viewOnly){
-      settingsButton.hidden=true; adminButton.hidden=true; logoutButton.hidden=true;
-      avatarChange.hidden=true; avatarFile.hidden=true;
-    }else{
-      settingsButton.hidden=false; logoutButton.hidden=false; avatarChange.hidden=false; avatarFile.hidden=false;
-    }
     const adminRoles=['Мл.Хелпер','Хелпер','Ст.Хелпер','Мл.Модератор','Модератор','Ст.Модератор','Куратор по рекламе','Куратор по команде проекта','Зам Куратор','Куратор режима','Создатель'];
+
+    // Публичный профиль полностью read-only: владелец профиля определяется
+    // только по URL id и текущей авторизации, поэтому чужой профиль никогда
+    // не получает кнопки владельца или админки.
+    if(viewOnly){
+      settingsButton.hidden=true;
+      adminButton.hidden=true;
+      logoutButton.hidden=true;
+      avatarChange.hidden=true;
+      avatarFile.hidden=true;
+      avatarInput.disabled=true;
+      return;
+    }
+
+    settingsButton.hidden=false;
+    logoutButton.hidden=false;
+    avatarChange.hidden=false;
+    avatarFile.hidden=false;
+    avatarInput.disabled=false;
     adminButton.hidden=!adminRoles.includes(current.role);
   }
 
