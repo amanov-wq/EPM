@@ -106,6 +106,21 @@ async function initDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS server_status (
+      id SERIAL PRIMARY KEY,
+      mode TEXT UNIQUE NOT NULL,
+      host TEXT NOT NULL,
+      port INTEGER NOT NULL DEFAULT 25565,
+      online BOOLEAN NOT NULL DEFAULT FALSE,
+      version TEXT DEFAULT '',
+      players INTEGER NOT NULL DEFAULT 0,
+      max_players INTEGER NOT NULL DEFAULT 0,
+      tps NUMERIC(6,2),
+      plugin TEXT DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS server_status_updated_idx ON server_status(updated_at DESC);
+
     CREATE TABLE IF NOT EXISTS punishment_history (
       id SERIAL PRIMARY KEY,
       nickname TEXT NOT NULL,
