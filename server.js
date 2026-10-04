@@ -373,37 +373,7 @@ app.get('/api/punishments',async(req,res)=>{
 });
 
 // Машинная интеграция: Minecraft-серверы отправляют бан сюда по API-ключу Render.
-app.post('/api/integrations/punishments',async(req,res)=>{
-  const mode=String(req.body.mode||'').trim();
-  const apiKey=String(req.get('X-EPM-API-Key')||'').trim();
-  if(!PUNISHMENT_MODES.includes(mode)||!punishmentApiKeyValid(mode,apiKey))return res.status(401).json({error:'Недействительный API-ключ интеграции'});
-  const nickname=String(req.body.nickname||'').trim().slice(0,24);
-  const reason=String(req.body.reason||'Не указана').trim().slice(0,500)||'Не указана';
-  const moderator=String(req.body.moderator||'Неизвестно').trim().slice(0,64)||'Неизвестно';
-  const type=String(req.body.type||'BAN').trim().slice(0,24)||'BAN';
-  const server=String(req.body.server||mode).trim().slice(0,64)||mode;
-  const externalId=String(req.body.externalId||'').trim().slice(0,160);
-  const expiresAt=req.body.expiresAt ? new Date(req.body.expiresAt) : null;
-  if(!nickname)return res.status(400).json({error:'Не указан ник игрока'});
-  if(expiresAt && Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата окончания блокировки'});
-  try{
-    if(pool){
-      if(externalId){
-        const duplicate=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);
-        if(duplicate.rows[0])return res.json({ok:true,duplicate:true,id:duplicate.rows[0].id});
-      }
-      const result=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,type,server,externalId||null]);
-      return res.status(201).json({ok:true,punishment:result.rows[0]});
-    }
-    const file=path.join(DATA_DIR,'punishment_history.json');
-    if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');
-    const punishments=readJsonFile(file);
-    if(externalId){const duplicate=punishments.find(p=>p.externalId===externalId);if(duplicate)return res.json({ok:true,duplicate:true,id:duplicate.id});}
-    const punishment={id:nextId(punishments),nickname,reason,moderator,expiresAt:expiresAt?expiresAt.toISOString():null,mode,type,server,externalId:externalId||null,createdAt:new Date().toISOString()};
-    punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');
-    res.status(201).json({ok:true,punishment});
-  }catch(error){console.error('Integration punishment error:',error);res.status(500).json({error:'Не удалось сохранить блокировку'});}
-});
+app.post('/api/integrations/punishments',async(req,res)=>{const mode=String(req.body.mode||'').trim(),key=String(req.get('X-EPM-API-Key')||'').trim(),type=String(req.body.type||'BAN').trim().toUpperCase();if(!PUNISHMENT_MODES.includes(mode)||!punishmentApiKeyValid(mode,key))return res.status(401).json({error:'Недействительный API-ключ интеграции'});const nickname=String(req.body.nickname||'').trim().slice(0,24),reason=String(req.body.reason||'Не указана').trim().slice(0,500)||'Не указана',moderator=String(req.body.moderator||'Неизвестно').trim().slice(0,64)||'Неизвестно',serverName=String(req.body.server||mode).trim().slice(0,64)||mode,externalId=String(req.body.externalId||'').trim().slice(0,160),expiresAt=req.body.expiresAt?new Date(req.body.expiresAt):null;if(!nickname)return res.status(400).json({error:'Не указан ник игрока'});if(expiresAt&&Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата окончания'});try{if(!pool)return res.status(503).json({error:'Интеграция требует PostgreSQL'});if(externalId&&type==='BAN'){const d=await pool.query('SELECT id FROM punishment_history WHERE external_id=$1',[externalId]);if(d.rows[0])return res.json({ok:true,duplicate:true,id:d.rows[0].id})}if(type==='UNBAN'){const p=externalId?(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE external_id=$1',[externalId])).rows[0]:(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE nickname=$1 AND mode=$2 ORDER BY created_at DESC LIMIT 1',[nickname,mode])).rows[0];if(!p)return res.status(404).json({error:'Исходная блокировка не найдена'});const d=await pool.query('SELECT id FROM unban_history WHERE punishment_id=$1',[p.id]);if(d.rows[0])return res.json({ok:true,duplicate:true,id:d.rows[0].id});const u=await pool.query('INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[p.id,nickname,moderator,reason,mode,serverName]);return res.status(201).json({ok:true,unbanId:u.rows[0].id})}const q=await pool.query(`INSERT INTO punishment_history(nickname,reason,moderator,expires_at,mode,punishment_type,server,external_id,created_at) VALUES($1,$2,$3,$4,$5,'BAN',$6,$7,NOW()) RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[nickname,reason,moderator,expiresAt?expiresAt.toISOString():null,mode,serverName,externalId||null]);res.status(201).json({ok:true,punishment:q.rows[0]})}catch(e){console.error('Integration punishment error:',e);res.status(500).json({error:'Не удалось сохранить блокировку'})}});
 
 app.post('/api/punishments',auth,async(req,res)=>{
   if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Добавлять блокировки могут только Ст.Модератор и выше'});
@@ -421,6 +391,9 @@ app.post('/api/punishments',auth,async(req,res)=>{
     punishments.push(punishment);fs.writeFileSync(file,JSON.stringify(punishments,null,2),'utf8');res.status(201).json({punishment});
   }catch(error){console.error('Punishment create error:',error);res.status(500).json({error:'Не удалось добавить блокировку'});}
 });
+
+app.patch('/api/punishments/:id',auth,async(req,res)=>{if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Редактировать блокировки могут только Ст.Модератор и выше'});const id=Number(req.params.id),reason=String(req.body.reason||'').trim().slice(0,500),mode=String(req.body.mode||'').trim().slice(0,64),expiresAt=req.body.expiresAt?new Date(req.body.expiresAt):null;if(!Number.isSafeInteger(id)||id<1||!reason||!mode)return res.status(400).json({error:'Некорректные данные'});if(expiresAt&&Number.isNaN(expiresAt.getTime()))return res.status(400).json({error:'Некорректная дата'});try{if(!pool)return res.status(503).json({error:'Редактирование доступно при PostgreSQL'});const q=await pool.query(`UPDATE punishment_history SET reason=$2,mode=$3,expires_at=$4 WHERE id=$1 RETURNING id,nickname,reason,moderator,expires_at AS "expiresAt",mode,punishment_type AS "type",server,external_id AS "externalId",created_at AS "createdAt"`,[id,reason,mode,expiresAt?expiresAt.toISOString():null]);if(!q.rows[0])return res.status(404).json({error:'Блокировка не найдена'});res.json({punishment:q.rows[0]})}catch(e){res.status(500).json({error:'Не удалось изменить блокировку'})}});
+app.post('/api/punishments/:id/unban',auth,async(req,res)=>{if(!hasRoleLevel(req.user,'Ст.Модератор'))return res.status(403).json({error:'Разблокировать могут только Ст.Модератор и выше'});const id=Number(req.params.id);try{if(!pool)return res.status(503).json({error:'Разблокировка доступна при PostgreSQL'});const p=(await pool.query('SELECT id,nickname,mode,server FROM punishment_history WHERE id=$1',[id])).rows[0];if(!p)return res.status(404).json({error:'Блокировка не найдена'});const d=await pool.query('SELECT id FROM unban_history WHERE punishment_id=$1',[id]);if(d.rows[0])return res.json({ok:true,duplicate:true});const q=await pool.query('INSERT INTO unban_history(punishment_id,nickname,moderator,reason,mode,server) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[id,p.nickname,req.user.nickname,'Разблокировка модератором EPM',p.mode,p.server]);res.status(201).json({ok:true,unbanId:q.rows[0].id})}catch(e){res.status(500).json({error:'Не удалось оформить разблокировку'})}});
 
 app.get('/api/news',async(req,res)=>{
   try{
