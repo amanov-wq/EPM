@@ -344,11 +344,27 @@
 .profile-editor{min-height:118px;padding:15px 16px;outline:0;color:#e9edf4;font:500 15px/1.55 Rajdhani;overflow-wrap:anywhere;caret-color:#b7a3ec}
 .profile-editor:empty:before{content:attr(data-placeholder);color:#4f5866;pointer-events:none}
 .profile-editor a{color:#b9a7ed}.profile-editor img{max-width:100%}
-.profile-message{position:relative}
-.profile-message-text{white-space:normal;overflow-wrap:anywhere}
-.profile-message-text p,.profile-message-text div{margin:.35em 0}
-.profile-message-delete{border:0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer;padding:4px 0}
+.profile-message-list{display:flex;flex-direction:column;gap:14px}
+.profile-message{position:relative;display:block;padding:16px 18px;border:1px solid rgba(154,132,214,.18);border-radius:14px;background:linear-gradient(145deg,rgba(20,24,35,.96),rgba(9,12,19,.94));box-shadow:0 10px 28px rgba(0,0,0,.18);overflow:hidden}
+.profile-message:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#a993e8,rgba(169,147,232,0))}
+.profile-message-head{display:flex;align-items:center;gap:11px;min-width:0;margin:0 0 12px;padding:0 0 11px;border-bottom:1px solid rgba(255,255,255,.06)}
+.profile-message-author{display:flex;align-items:center;gap:10px;min-width:0;color:#edf0f6;text-decoration:none;font:700 14px/1 Oxanium}
+.profile-message-author:hover{color:#c7b8f2}
+.profile-message-author img,.profile-message-author>span{width:36px;height:36px;flex:0 0 36px;border-radius:50%;object-fit:cover;border:1px solid rgba(177,157,230,.4);background:linear-gradient(145deg,#252b3a,#151923);display:grid;place-items:center;color:#cfc5ec;font:700 12px Oxanium;overflow:hidden}
+.profile-message-date{margin-left:auto;flex:0 0 auto;color:#687181;font:500 11px/1.2 Oxanium;white-space:nowrap}
+.profile-message-text{padding:1px 2px 0;color:#d9dde5;font:500 15px/1.6 Rajdhani;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.profile-message-text p,.profile-message-text div{margin:.25em 0}
+.profile-message-text span{max-width:100%}
+.profile-message-delete{margin-top:12px;border:0;border-top:1px solid rgba(255,255,255,.05);padding:9px 0 0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer}
 .profile-message-delete:hover{color:#e19aa3}
+@media(max-width:600px){
+  .profile-message{padding:13px 14px}
+  .profile-message-head{gap:8px}
+  .profile-message-author{font-size:13px}
+  .profile-message-author img,.profile-message-author>span{width:32px;height:32px;flex-basis:32px}
+  .profile-message-date{font-size:9px}
+  .profile-message-text{font-size:14px}
+}
 </style>
 </head>
 <body>
