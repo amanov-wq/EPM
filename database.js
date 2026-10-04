@@ -182,7 +182,7 @@ async function replaceFromJson(name, rows) {
         await client.query(
           `INSERT INTO users
             (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
            ON CONFLICT (id) DO UPDATE SET
              nickname=EXCLUDED.nickname,
              password=EXCLUDED.password,
