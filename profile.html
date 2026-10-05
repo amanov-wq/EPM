@@ -708,6 +708,7 @@
       document.title='Профиль '+(data.user.nickname||'')+' — EPM';
       document.getElementById('messagesHint').textContent='Оставьте сообщение в профиле этого пользователя.';
       await loadProfileMessages(targetId);
+      setupMessageEditor();
       return;
     }catch(error){
       guest.hidden=false;userBox.hidden=true;
@@ -821,32 +822,21 @@
     avatarInput.value='';
   };
 
-  document.getElementById('sendProfileMessage').onclick=sendProfileMessage;
-  document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
-  });
+  function setupMessageEditor(){
+    document.getElementById('sendProfileMessage').onclick=sendProfileMessage;
+    document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
+    });
+    document.querySelectorAll('[data-cmd]').forEach(button=>{
+      button.onclick=()=>{document.getElementById('profileMessageInput').focus();document.execCommand(button.dataset.cmd,false,null)};
+    });
+    document.getElementById('messageFont').onchange=e=>{document.getElementById('profileMessageInput').focus();document.execCommand('fontName',false,e.target.value)};
+    document.getElementById('messageSize').onchange=e=>{document.getElementById('profileMessageInput').focus();document.execCommand('fontSize',false,e.target.value)};
+    document.getElementById('messageClear').onclick=()=>{document.getElementById('profileMessageInput').focus();document.execCommand('removeFormat',false,null)};
+  }
+  setupMessageEditor();
 
-  document.querySelectorAll('[data-cmd]').forEach(button=>{
-    button.onclick=()=>{
-      document.getElementById('profileMessageInput').focus();
-      document.execCommand(button.dataset.cmd,false,null);
-    };
-  });
-  document.getElementById('messageFont').onchange=e=>{
-    document.getElementById('profileMessageInput').focus();
-    document.execCommand('fontName',false,e.target.value);
-  };
-  document.getElementById('messageSize').onchange=e=>{
-    document.getElementById('profileMessageInput').focus();
-    document.execCommand('fontSize',false,e.target.value);
-  };
-  document.getElementById('messageClear').onclick=()=>{
-    document.getElementById('profileMessageInput').focus();
-    document.execCommand('removeFormat',false,null);
-  };
-  document.getElementById('profileMessageInput').addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendProfileMessage();}
-  });
+
 
 
   document.getElementById('logout').onclick=()=>{
