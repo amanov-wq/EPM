@@ -11,9 +11,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!Array.isArray(news) || news.length === 0) {
       grid.innerHTML = '';
-      if (empty) empty.textContent = 'Новых публикаций пока нет.';
+      if (feature) feature.style.display = 'none';
+      if (empty) { empty.textContent = 'Новых публикаций пока нет.'; empty.classList.remove('hidden'); }
       return;
     }
+    if (feature) feature.style.display = '';
+    if (empty) empty.classList.add('hidden');
 
     grid.innerHTML = news.map(item => `
       <article class="news-card" data-category="${escapeHtml(item.category)}">
@@ -48,7 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } catch (error) {
     console.error('EPM news:', error);
-    if (empty) empty.textContent = 'Новости временно недоступны.';
+    if (grid) grid.innerHTML = '';
+    if (feature) feature.style.display = 'none';
+    if (empty) { empty.textContent = 'Новости временно недоступны.'; empty.classList.remove('hidden'); }
   }
 
   function label(category) {
