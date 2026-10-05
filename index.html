@@ -11,7 +11,7 @@
 const play=document.getElementById('playButton'),modal=document.getElementById('guestModal'),close=document.getElementById('guestClose'),links=document.getElementById('accountLinks');
 function logged(){return Boolean(localStorage.getItem('epmToken')||localStorage.getItem('token')||localStorage.getItem('user'))}
 function paint(){links.classList.toggle('logged-in',logged())}
-play.onclick=()=>{if(logged())location.href='forum.html';else modal.classList.add('show')};
+play.onclick=()=>{if(logged())location.href='server-info.html';else modal.classList.add('show')};
 close.onclick=()=>modal.classList.remove('show');
 modal.onclick=e=>{if(e.target===modal)modal.classList.remove('show')};
 paint();window.addEventListener('storage',paint);
