@@ -534,6 +534,7 @@
   const initials=n=>String(n||'EPM').trim().slice(0,2).toUpperCase();
   const date=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'})};
 
+  function epmRoleClass(role){const roles=["Пользователь","Стример","Стажер","Мл.Хелпер","Хелпер","Ст.Хелпер","Мл.Модератор","Модератор","Ст.Модератор","Куратор по рекламе","Куратор по команде проекта","Зам Куратор","Куратор режима","Создатель"];const classes=["role-user","role-streamer","role-trainee","role-junior-helper","role-helper","role-senior-helper","role-junior-moderator","role-moderator","role-senior-moderator","role-ad-curator","role-team-curator","role-deputy-curator","role-mode-curator","role-creator"];const i=roles.indexOf(String(role||'Пользователь'));return classes[i<0?0:i]};
   function setAvatar(src,name){
     if(src) avatar.innerHTML='<img src="'+esc(src)+'" alt="Аватар">';
     else avatar.textContent=initials(name);
@@ -552,6 +553,7 @@
     const name=current.nickname||'EPM';
     document.getElementById('nickname').textContent=name;
     document.getElementById('role').textContent=current.role||'Пользователь';
+    document.getElementById('role').className='role epm-role '+epmRoleClass(current.role);
     document.getElementById('profileId').textContent='ID '+Number(current.id||0);
     document.getElementById('description').textContent=current.description||'Новый участник EPM';
     document.getElementById('messages').textContent=Number(current.posts||0);
