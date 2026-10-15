@@ -178,7 +178,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
 
 app.post('/api/auth/login',async(req,res)=>{try{
   const nickname=String(req.body.nickname||'').trim(),password=hash(String(req.body.password||''));let user=null;
-  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
+  if(pool){const result=await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub AS "googleSub",email,created_at AS "createdAt" FROM users WHERE LOWER(nickname)=LOWER($1)`,[nickname]);user=result.rows[0]||null;}else user=read('users').find(u=>String(u.nickname).toLowerCase()===nickname.toLowerCase());
   if(!user||user.password!==password)return res.status(401).json({error:'Неверный ник или пароль'});
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   user.role='Создатель';
