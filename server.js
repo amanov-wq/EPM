@@ -204,7 +204,7 @@ async function createGoogleUser(profile){
   const nickname=await uniqueGoogleNickname(profile.email);
   let id;
   if(pool){const q=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(q.rows[0].id)}else id=nextId(read('users'));
-  user={id,nickname,password:hash(crypto.randomBytes(32).toString('hex')),role:'Создатель',description:'Новый участник EPM',avatar:String(profile.picture||'').slice(0,2000),posts:0,topics:0,level:1,experience:0,blocked:false,googleSub:profile.sub,email:profile.email,createdAt:new Date().toISOString()};
+  user={id,nickname,password:hash(crypto.randomBytes(32).toString('hex')),role:'Пользователь',description:'Новый участник EPM',avatar:String(profile.picture||'').slice(0,2000),posts:0,topics:0,level:1,experience:0,blocked:false,googleSub:profile.sub,email:profile.email,createdAt:new Date().toISOString()};
   await saveUser(user);return user;
 }
 app.get('/api/auth/google',(req,res)=>{
