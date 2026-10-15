@@ -163,6 +163,10 @@ async function initDatabase() {
     CREATE UNIQUE INDEX IF NOT EXISTS punishment_history_external_id_idx ON punishment_history(external_id) WHERE external_id IS NOT NULL;
   `);
 
+  // Keep the database default aligned with EPM registration: new accounts start as Пользователь.
+  // CREATE TABLE IF NOT EXISTS does not update defaults on an already existing Render database.
+  await pool.query("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'Пользователь'");
+
   return true;
 }
 
