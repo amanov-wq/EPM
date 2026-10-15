@@ -271,13 +271,13 @@ app.patch('/api/profile',auth,async(req,res)=>{try{req.user.description=String(r
 app.patch('/api/profile/password',auth,async(req,res)=>{try{const currentPassword=String(req.body.currentPassword||''),newPassword=String(req.body.newPassword||''),confirmPassword=String(req.body.confirmPassword||'');if(!currentPassword)return res.status(400).json({error:'Введите текущий пароль'});if(newPassword.length<6)return res.status(400).json({error:'Новый пароль должен быть не короче 6 символов'});if(newPassword!==confirmPassword)return res.status(400).json({error:'Новые пароли не совпадают'});if(hash(currentPassword)!==req.user.password)return res.status(400).json({error:'Текущий пароль указан неверно'});if(hash(newPassword)===req.user.password)return res.status(400).json({error:'Новый пароль должен отличаться от текущего'});req.user.password=hash(newPassword);await saveUser(req.user);res.json({ok:true});}catch(error){console.error('Password update error:',error);res.status(500).json({error:'Не удалось изменить пароль'});}});
 
 app.get('/api/admin/users',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   try{const users=pool?(await pool.query(`SELECT id,nickname,role,description,posts,topics,avatar,blocked,created_at AS "createdAt" FROM users ORDER BY id`)).rows:read('users').map(u=>({id:u.id,nickname:u.nickname,role:u.role||'Пользователь',description:u.description||'',posts:u.posts||0,topics:u.topics||0,avatar:u.avatar||'',blocked:Boolean(u.blocked),createdAt:u.createdAt||null}));res.json({users});}
   catch(error){console.error('Admin users error:',error);res.status(500).json({error:'Ошибка загрузки пользователей'});}
 });
 
 app.get('/api/admin/online',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   try{
     if(pool){
       const result=await pool.query(`SELECT u.id,u.nickname,u.role,u.avatar,s.last_seen AS "lastSeen"
@@ -293,7 +293,7 @@ app.get('/api/admin/online',auth,async(req,res)=>{
 });
 
 app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   const userId=Number(req.params.id);
   if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
   if(userId===Number(req.user.id))return res.status(400).json({error:'Нельзя заблокировать собственный аккаунт'});
@@ -477,7 +477,7 @@ app.get('/api/news',async(req,res)=>{
 });
 
 app.post('/api/admin/news',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   const category=String(req.body.category||'community').trim().slice(0,32)||'community';
   const title=String(req.body.title||'').trim().slice(0,160);
   const text=String(req.body.text||'').trim().slice(0,3000);
@@ -497,7 +497,7 @@ app.post('/api/admin/news',auth,async(req,res)=>{
 });
 
 app.patch('/api/admin/news/:id',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Некорректная новость'});
   const category=String(req.body.category||'community').trim().slice(0,32)||'community';
   const title=String(req.body.title||'').trim().slice(0,160);
@@ -519,7 +519,7 @@ app.patch('/api/admin/news/:id',auth,async(req,res)=>{
 });
 
 app.delete('/api/admin/news/:id',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Некорректная новость'});
   try{
     if(pool){
@@ -541,7 +541,7 @@ app.get('/api/reviews',async(req,res)=>{
 });
 
 app.get('/api/purchases',auth,async(req,res)=>{
-  if(!canAccessAdmin(req.user))return res.status(403).json({error:'Доступ только для Мл.Хелпера и выше'});
+  if(!isCreator(req.user))return res.status(403).json({error:'Доступ к админ-панели разрешён только Создателю'});
   try{
     if(pool)return res.json({purchases:(await pool.query('SELECT id,nickname,product,amount,status,created_at AS "createdAt" FROM purchases ORDER BY created_at DESC,id DESC LIMIT 500')).rows});
     const file=path.join(DATA_DIR,'purchases.json');if(!fs.existsSync(file))fs.writeFileSync(file,'[]','utf8');return res.json({purchases:readJsonFile(file)});
