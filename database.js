@@ -25,6 +25,17 @@ async function initDatabase() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub_unique_idx ON users(google_sub) WHERE google_sub IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users(LOWER(email)) WHERE email IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS oauth_login_codes (
+      code_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS oauth_login_codes_expiry_idx ON oauth_login_codes(expires_at);
 
     CREATE TABLE IF NOT EXISTS online_sessions (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
