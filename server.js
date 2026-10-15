@@ -3,9 +3,14 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { pool, initDatabase } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'https://epmofficial.onrender.com/api/auth/google/callback';
+const googleOAuthClient = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL);
 const DATA_DIR = path.join(__dirname, 'data');
 const PUNISHMENT_API_KEYS = Object.freeze({
   'Estamon Grief': process.env.EPM_GRIEF_API_KEY || '',
@@ -89,14 +94,14 @@ const isCreator = (user) => user?.role === ROLE_PERMISSIONS.creatorRole;
 
 async function getUser(id) {
   if (pool) {
-    const result = await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt" FROM users WHERE id=$1`, [id]);
+    const result = await pool.query(`SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub AS "googleSub",email,created_at AS "createdAt" FROM users WHERE id=$1`, [id]);
     if (result.rows[0]) return result.rows[0];
   }
   return read('users').find((user) => Number(user.id) === Number(id)) || null;
 }
 async function saveUser(user) {
   if (pool) {
-    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,experience=EXCLUDED.experience,blocked=EXCLUDED.blocked,created_at=EXCLUDED.created_at`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,user.experience||0,Boolean(user.blocked),user.createdAt||new Date()]);
+    await pool.query(`INSERT INTO users (id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub,email,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) ON CONFLICT (id) DO UPDATE SET nickname=EXCLUDED.nickname,password=EXCLUDED.password,role=EXCLUDED.role,description=EXCLUDED.description,avatar=EXCLUDED.avatar,posts=EXCLUDED.posts,topics=EXCLUDED.topics,level=EXCLUDED.level,experience=EXCLUDED.experience,blocked=EXCLUDED.blocked,google_sub=EXCLUDED.google_sub,email=EXCLUDED.email,created_at=EXCLUDED.created_at`, [user.id,user.nickname,user.password,user.role||'Пользователь',user.description||'',user.avatar||'',user.posts||0,user.topics||0,user.level||1,user.experience||0,Boolean(user.blocked),user.googleSub||null,user.email||null,user.createdAt||new Date()]);
     return;
   }
   const users = read('users');
@@ -114,7 +119,7 @@ async function auth(req,res,next) {
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   req.user=user; next();
 }
-function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;return copy;}
+function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;delete copy.googleSub;delete copy.google_sub;delete copy.email;return copy;}
 function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
 
 app.get('/api/users/search',async(req,res)=>{
@@ -182,6 +187,70 @@ app.post('/api/auth/login',async(req,res)=>{try{
 }catch(error){console.error('Login error:',error);res.status(500).json({error:'Ошибка входа'});}});
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
 app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
+
+
+function getCookie(req,name){const raw=String(req.headers.cookie||'');for(const part of raw.split(';')){const i=part.indexOf('=');if(i<0)continue;if(part.slice(0,i).trim()===name)return decodeURIComponent(part.slice(i+1).trim())}return ''}
+function secureEqualText(a,b){const aa=Buffer.from(String(a||'')),bb=Buffer.from(String(b||''));return aa.length===bb.length&&aa.length>0&&crypto.timingSafeEqual(aa,bb)}
+function googleAuthError(res,code){return res.redirect('/login.html?google_error='+encodeURIComponent(code))}
+async function nicknameInUse(nickname){if(pool){const q=await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1) LIMIT 1',[nickname]);return Boolean(q.rows[0])}return read('users').some(u=>String(u.nickname||'').toLowerCase()===nickname.toLowerCase())}
+async function uniqueGoogleNickname(email){let base=String(email||'').split('@')[0].replace(/[^A-Za-zА-Яа-яЁё0-9_]/g,'').slice(0,24);if(base.length<3)base='GoogleUser';let candidate=base;for(let n=2;await nicknameInUse(candidate);n++){const suffix='_'+n;candidate=base.slice(0,24-suffix.length)+suffix;if(n>9999)throw new Error('Could not allocate unique nickname')}return candidate}
+async function findGoogleUser(sub){if(pool){const q=await pool.query('SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub AS "googleSub",email,created_at AS "createdAt" FROM users WHERE google_sub=$1 LIMIT 1',[sub]);return q.rows[0]||null}return read('users').find(u=>String(u.googleSub||u.google_sub||'')===String(sub))||null}
+async function findGoogleEmailUser(email){if(pool){const q=await pool.query('SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub AS "googleSub",email,created_at AS "createdAt" FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1',[email]);return q.rows[0]||null}return read('users').find(u=>String(u.email||'').toLowerCase()===String(email).toLowerCase())||null}
+async function createGoogleUser(profile){
+  let user=await findGoogleUser(profile.sub);
+  if(user){if(Boolean(user.blocked))throw new Error('blocked');user.email=profile.email;user.googleSub=profile.sub;if(profile.picture&&!user.avatar)user.avatar=String(profile.picture).slice(0,2000);await saveUser(user);return user}
+  // A verified Google email can safely identify a previously email-linked EPM account.
+  user=await findGoogleEmailUser(profile.email);
+  if(user){if(Boolean(user.blocked))throw new Error('blocked');if(user.googleSub&&user.googleSub!==profile.sub)throw new Error('email_linked');user.googleSub=profile.sub;user.email=profile.email;if(profile.picture&&!user.avatar)user.avatar=String(profile.picture).slice(0,2000);await saveUser(user);return user}
+  const nickname=await uniqueGoogleNickname(profile.email);
+  let id;
+  if(pool){const q=await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users');id=Number(q.rows[0].id)}else id=nextId(read('users'));
+  user={id,nickname,password:hash(crypto.randomBytes(32).toString('hex')),role:'Создатель',description:'Новый участник EPM',avatar:String(profile.picture||'').slice(0,2000),posts:0,topics:0,level:1,experience:0,blocked:false,googleSub:profile.sub,email:profile.email,createdAt:new Date().toISOString()};
+  await saveUser(user);return user;
+}
+app.get('/api/auth/google',(req,res)=>{
+  if(!GOOGLE_CLIENT_ID||!GOOGLE_CLIENT_SECRET||!GOOGLE_CALLBACK_URL)return res.status(503).send('Вход через Google пока не настроен. Проверьте переменные окружения Render.');
+  const state=crypto.randomBytes(24).toString('hex');
+  res.setHeader('Set-Cookie','epm_google_oauth_state='+state+'; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=600');
+  const url=googleOAuthClient.generateAuthUrl({access_type:'online',scope:['openid','email','profile'],state,prompt:'select_account'});
+  res.redirect(url);
+});
+app.get('/api/auth/google/callback',async(req,res)=>{
+  const state=String(req.query.state||''),savedState=getCookie(req,'epm_google_oauth_state');
+  res.setHeader('Set-Cookie','epm_google_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth/google; Max-Age=0');
+  if(req.query.error)return googleAuthError(res,'cancelled');
+  if(!secureEqualText(state,savedState))return googleAuthError(res,'state');
+  const code=String(req.query.code||'');
+  if(!code)return googleAuthError(res,'failed');
+  try{
+    if(!GOOGLE_CLIENT_ID||!GOOGLE_CLIENT_SECRET)throw new Error('Google OAuth is not configured');
+    const {tokens}=await googleOAuthClient.getToken(code);
+    if(!tokens.id_token)throw new Error('Google did not return an ID token');
+    const ticket=await googleOAuthClient.verifyIdToken({idToken:tokens.id_token,audience:GOOGLE_CLIENT_ID});
+    const p=ticket.getPayload();
+    if(!p||!p.sub||!p.email||p.email_verified!==true)throw new Error('Google email is not verified');
+    let user;
+    try{user=await createGoogleUser({sub:String(p.sub),email:String(p.email).toLowerCase(),picture:p.picture||''})}
+    catch(e){if(e.message==='blocked')return googleAuthError(res,'blocked');if(e.message==='email_linked')return googleAuthError(res,'email_linked');throw e}
+    const rawCode=crypto.randomBytes(32).toString('hex'),codeHash=hash(rawCode),expiresAt=new Date(Date.now()+120000);
+    if(pool)await pool.query('INSERT INTO oauth_login_codes(code_hash,user_id,expires_at) VALUES($1,$2,$3)',[codeHash,user.id,expiresAt]);
+    else{global.__epmGoogleLoginCodes=global.__epmGoogleLoginCodes||new Map();global.__epmGoogleLoginCodes.set(codeHash,{userId:Number(user.id),expiresAt:expiresAt.getTime()})}
+    res.redirect('/auth-google-complete.html?code='+encodeURIComponent(rawCode));
+  }catch(error){console.error('Google OAuth callback error:',error);googleAuthError(res,'failed')}
+});
+app.post('/api/auth/google/exchange',async(req,res)=>{
+  const rawCode=String(req.body.code||'');
+  if(!/^[a-f0-9]{64}$/i.test(rawCode))return res.status(400).json({error:'Код авторизации недействителен или устарел'});
+  try{
+    const codeHash=hash(rawCode);let userId=null;
+    if(pool){const q=await pool.query('DELETE FROM oauth_login_codes WHERE code_hash=$1 AND expires_at>NOW() RETURNING user_id',[codeHash]);userId=q.rows[0]?.user_id||null}
+    else{const codes=global.__epmGoogleLoginCodes||new Map(),entry=codes.get(codeHash);codes.delete(codeHash);if(entry&&entry.expiresAt>Date.now())userId=entry.userId}
+    if(!userId)return res.status(400).json({error:'Код авторизации уже использован или истёк. Попробуйте войти через Google ещё раз.'});
+    const user=await getUser(userId);
+    if(!user||Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован или не найден'});
+    res.json({token:makeToken(user.id),user:safeUser(user)});
+  }catch(error){console.error('Google OAuth exchange error:',error);res.status(500).json({error:'Не удалось завершить вход через Google'})}
+});
 
 app.get('/api/notifications',auth,async(req,res)=>{
   try{
