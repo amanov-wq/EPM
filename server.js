@@ -300,6 +300,58 @@ app.patch('/api/admin/users/:id/status',auth,async(req,res)=>{
   if(typeof req.body.blocked!=='boolean')return res.status(400).json({error:'Статус блокировки должен быть true или false'});
   try{const user=await getUser(userId);if(!user)return res.status(404).json({error:'Пользователь не найден'});if(user.role==='Создатель')return res.status(403).json({error:'Аккаунт Создателя нельзя заблокировать'});user.blocked=req.body.blocked;await saveUser(user);await createNotification({recipientId:user.id,actorId:req.user.id,type:'admin_action',title:req.body.blocked?'Аккаунт заблокирован':'Аккаунт разблокирован',body:req.body.blocked?'Ваш аккаунт заблокирован администрацией EPM.':'Ваш аккаунт разблокирован.',url:'profile.html?id='+user.id});res.json({user:safeUser(user)});}catch(error){console.error('Admin status error:',error);res.status(500).json({error:'Не удалось изменить статус пользователя'});}
 });
+
+app.post('/api/admin/users/:id/reset',auth,async(req,res)=>{
+  if(!isCreator(req.user))return res.status(403).json({error:'Полный сброс аккаунта доступен только Создателю'});
+  const userId=Number(req.params.id);
+  if(!Number.isSafeInteger(userId)||userId<1)return res.status(400).json({error:'Некорректный пользователь'});
+  if(userId===Number(req.user.id))return res.status(400).json({error:'Нельзя обнулить собственный аккаунт Создателя'});
+  const confirmation=String(req.body.confirmation||'');
+  try{
+    if(pool){
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const found=await client.query('SELECT id,nickname,role FROM users WHERE id=$1 FOR UPDATE',[userId]);
+        const target=found.rows[0];
+        if(!target){await client.query('ROLLBACK');return res.status(404).json({error:'Пользователь не найден'});}
+        if(target.role==='Создатель'){await client.query('ROLLBACK');return res.status(403).json({error:'Аккаунт Создателя нельзя обнулить'});}
+        if(confirmation!==target.nickname){await client.query('ROLLBACK');return res.status(400).json({error:'Подтверждение не совпадает с ником пользователя'});}
+        await client.query('DELETE FROM topics WHERE author_id=$1',[userId]);
+        await client.query('DELETE FROM replies WHERE author_id=$1',[userId]);
+        await client.query('DELETE FROM profile_messages WHERE profile_user_id=$1 OR author_id=$1',[userId]);
+        await client.query(`UPDATE users u SET
+          topics=(SELECT COUNT(*)::int FROM topics t WHERE t.author_id=u.id),
+          posts=(SELECT COUNT(*)::int FROM replies r WHERE r.author_id=u.id)`);
+        await client.query("UPDATE users SET description='',avatar='',topics=0,posts=0,level=1,experience=0 WHERE id=$1",[userId]);
+        await client.query('COMMIT');
+      }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+    }else{
+      const users=read('users'),target=users.find(u=>Number(u.id)===userId);
+      if(!target)return res.status(404).json({error:'Пользователь не найден'});
+      if(target.role==='Создатель')return res.status(403).json({error:'Аккаунт Создателя нельзя обнулить'});
+      if(confirmation!==target.nickname)return res.status(400).json({error:'Подтверждение не совпадает с ником пользователя'});
+      const topics=read('topics'),replies=read('replies');
+      const removedTopicIds=new Set(topics.filter(t=>Number(t.authorId)===userId).map(t=>Number(t.id)));
+      write('topics',topics.filter(t=>Number(t.authorId)!==userId));
+      const remainingReplies=replies.filter(r=>Number(r.authorId)!==userId&&!removedTopicIds.has(Number(r.topicId)));
+      write('replies',remainingReplies);
+      const messageFile=path.join(DATA_DIR,'profile_messages.json');
+      if(fs.existsSync(messageFile)){
+        const messages=JSON.parse(fs.readFileSync(messageFile,'utf8'));
+        fs.writeFileSync(messageFile,JSON.stringify(messages.filter(m=>Number(m.profileUserId)!==userId&&Number(m.authorId)!==userId),null,2),'utf8');
+      }
+      for(const user of users){
+        user.topics=topics.filter(t=>Number(t.authorId)===Number(user.id)&&!removedTopicIds.has(Number(t.id))).length;
+        user.posts=remainingReplies.filter(r=>Number(r.authorId)===Number(user.id)).length;
+      }
+      target.description='';target.avatar='';target.topics=0;target.posts=0;target.level=1;target.experience=0;
+      write('users',users);
+    }
+    return res.json({ok:true,userId,reset:{topics:true,replies:true,profileMessages:true,description:true,avatar:true,stats:true}});
+  }catch(error){console.error('Admin account reset error:',error);return res.status(500).json({error:'Не удалось полностью обнулить аккаунт'});}
+});
+
 app.patch('/api/admin/users/:id/role',auth,async(req,res)=>{
   if(!isCreator(req.user))return res.status(403).json({error:'Изменять роли может только Создатель'});
   const userId=Number(req.params.id);
