@@ -10,9 +10,38 @@ function syncSiteNav(){const n=document.querySelector('.topbar nav');if(!n)retur
 function logout(){fetch('/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+getToken()}}).catch(()=>{});localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);localStorage.removeItem('user');clearInterval(window.__epmPresenceTimer);clearInterval(window.__epmNotifyTimer);location.href='index.html'}
 async function restoreSession(){const t=getToken(),cached=getUser();if(!t){syncHeader(null);window.epmUser=null;return null}try{const r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+t},cache:'no-store'});if(r.ok){const d=await r.json();saveSession({token:t,user:d.user});syncHeader(d.user);window.epmUser=d.user;startPresence();return d.user}if(r.status===401||r.status===403){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(USER_KEY);localStorage.removeItem('user');syncHeader(null);window.epmUser=null;return null}}catch{}if(cached){syncHeader(cached);window.epmUser=cached;startPresence();return cached}syncHeader(null);window.epmUser=null;return null}
 async function startPresence(){if(window.__epmPresenceTimer)return;const beat=async()=>{try{await fetch('/api/presence/heartbeat',{method:'POST',headers:{Authorization:'Bearer '+getToken()},cache:'no-store',keepalive:true})}catch{}};await beat();window.__epmPresenceTimer=setInterval(beat,30000)}
-async function setupAuth(mode){const f=document.getElementById('form'),e=document.getElementById('error');if(!f)return;f.onsubmit=async x=>{x.preventDefault();e.textContent='';const n=document.getElementById('nickname').value.trim(),p=document.getElementById('password').value;if(mode==='register'&&p!==document.getElementById('confirm').value){e.textContent='Пароли не совпадают';return}try{const r=await fetch('/api/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:n,password:p})}),d=await r.json();if(!r.ok)throw new Error(d.error||'Ошибка');saveSession(d);startPresence();location.href='profile.html'}catch(err){e.textContent=err.message||'Сервер недоступен'}}}
-function showGoogleAuthError(){const code=new URLSearchParams(location.search).get('google_error');if(!code)return;const messages={cancelled:'Вход через Google отменён.',state:'Не удалось подтвердить безопасность входа. Попробуй ещё раз.',blocked:'Этот аккаунт EPM заблокирован.',email_linked:'Этот Google-аккаунт не удалось связать с существующим аккаунтом EPM. Войди обычным способом.',failed:'Не удалось войти через Google. Попробуй ещё раз.'};const e=document.getElementById('error');if(e)e.textContent=messages[code]||messages.failed}
+async function setupAuth(mode){
+  const form=document.getElementById('form'),error=document.getElementById('error');
+  if(!form)return;
+  const submit=form.querySelector('[type="submit"]');
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(submit?.disabled)return;
+    error.textContent='';
+    const nickname=document.getElementById('nickname').value.trim();
+    const password=document.getElementById('password').value;
+    if(mode==='register'&&password!==document.getElementById('confirm').value){error.textContent='Пароли не совпадают';document.getElementById('confirm').focus();return;}
+    if(!nickname||!password){error.textContent='Заполни ник и пароль.';return;}
+    if(mode==='register'&&(password.length<6||password.length>128)){error.textContent='Пароль должен содержать от 6 до 128 символов.';return;}
+    if(submit){submit.disabled=true;submit.dataset.originalText=submit.textContent;submit.textContent=mode==='login'?'Входим…':'Создаём аккаунт…';}
+    form.setAttribute('aria-busy','true');
+    try{
+      const response=await fetch('/api/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname,password,confirmPassword:mode==='register'?document.getElementById('confirm').value:undefined}),cache:'no-store'});
+      let data={};try{data=await response.json()}catch{}
+      if(!response.ok)throw new Error(data.error||'Не удалось выполнить запрос.');
+      if(!data.token||!data.user)throw new Error('Сервер вернул некорректный ответ. Попробуй ещё раз.');
+      saveSession(data);
+      await startPresence();
+      location.replace('profile.html');
+    }catch(err){
+      error.textContent=err.message||'Сервер недоступен. Проверь соединение и попробуй ещё раз.';
+      if(submit){submit.disabled=false;submit.textContent=submit.dataset.originalText|| (mode==='login'?'Войти в EPM':'Создать аккаунт');}
+      form.removeAttribute('aria-busy');
+    }
+  });
+}
+
 function installMobileMenu(){const t=document.querySelector('.topbar'),n=document.querySelector('.topbar nav');if(!t||!n)return;let b=document.getElementById('epmMobileToggle'),p=document.getElementById('epmMobilePanel');if(!b){b=document.createElement('button');b.id='epmMobileToggle';b.className='epm-mobile-toggle';b.type='button';b.innerHTML='<span></span><span></span><span></span>';t.insertBefore(b,n);p=document.createElement('div');p.id='epmMobilePanel';p.className='epm-mobile-panel';p.innerHTML='<div class="epm-mobile-drawer"><div class="epm-mobile-panel-head"><b>EPM</b><button id="epmMobileClose" type="button">×</button></div><div class="epm-mobile-links"></div></div>';document.body.appendChild(p);b.onclick=()=>p.classList.add('show');p.querySelector('#epmMobileClose').onclick=()=>p.classList.remove('show');p.onclick=e=>{if(e.target===p)p.classList.remove('show')}}p.querySelector('.epm-mobile-links').innerHTML=n.innerHTML;p.querySelectorAll('a').forEach(a=>a.onclick=()=>p.classList.remove('show'))}
 function setupNotifications(){const b=document.getElementById('epmNotifyButton');if(!b||b.dataset.ready)return;b.dataset.ready='1';const p=document.createElement('div');p.id='epmNotifyPanel';p.className='epm-notify-panel';p.innerHTML='<div class="epm-notify-head"><b>Уведомления</b><button id="epmNotifyRead" type="button">Прочитать всё</button></div><div id="epmNotifyList" class="epm-notify-list"><div class="epm-notify-empty">Уведомлений нет.</div></div>';document.body.appendChild(p);b.onclick=async e=>{e.stopPropagation();p.classList.toggle('show');if(p.classList.contains('show'))await loadNotifications()};p.querySelector('#epmNotifyRead').onclick=async()=>{await fetch('/api/notifications/read',{method:'POST',headers:{Authorization:'Bearer '+getToken()}}).catch(()=>{});loadNotifications()};loadNotifications();clearInterval(window.__epmNotifyTimer);window.__epmNotifyTimer=setInterval(loadNotifications,30000)}
 async function loadNotifications(){const l=document.getElementById('epmNotifyList'),c=document.getElementById('epmNotifyCount');if(!l)return;try{const r=await fetch('/api/notifications',{headers:{Authorization:'Bearer '+getToken()},cache:'no-store'}),d=await r.json();if(!r.ok)throw 0;if(c)c.textContent=String(d.unread||0);l.innerHTML=(d.notifications||[]).map(n=>{const i=n.type==='topic_reply'?'💬':n.type==='mention'?'@':n.type==='admin_action'?'🛡️':n.type==='punishment'?'🔨':'👤';return '<a class="epm-notify-item '+(n.isRead?'':'unread')+'" href="'+escapeHtml(n.url||'#')+'"><span class="epm-notify-icon">'+i+'</span><span><b>'+escapeHtml(n.title||'Уведомление')+'</b><small>'+escapeHtml(n.body||'')+'</small><em>'+escapeHtml(new Date(n.createdAt).toLocaleString('ru-RU'))+'</em></span></a>'}).join('')||'<div class="epm-notify-empty">Уведомлений нет.</div>'}catch{if(c)c.textContent='0';l.innerHTML='<div class="epm-notify-empty">Уведомления недоступны.</div>'}}
-document.addEventListener('DOMContentLoaded',()=>{syncSiteNav();syncHeader(getUser());restoreSession();showGoogleAuthError()});if(document.readyState!=='loading'){syncSiteNav();syncHeader(getUser());restoreSession();showGoogleAuthError()}window.EPMAuth={getToken,getUser,saveSession,restoreSession,logout,syncHeader,syncSiteNav,startPresence};
+document.addEventListener('DOMContentLoaded',()=>{syncSiteNav();syncHeader(getUser());restoreSession()});if(document.readyState!=='loading'){syncSiteNav();syncHeader(getUser());restoreSession();showGoogleAuthError()}window.EPMAuth={getToken,getUser,saveSession,restoreSession,logout,syncHeader,syncSiteNav,startPresence};
