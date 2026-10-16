@@ -41,6 +41,66 @@ async function setupAuth(mode){
   });
 }
 
+async function setupGoogleAuth(buttonId='googleAuthButton') {
+  const button = document.getElementById(buttonId);
+  if (!button || button.dataset.ready === '1') return;
+  button.dataset.ready = '1';
+  const error = document.getElementById('error');
+  try {
+    const configResponse = await fetch('/api/auth/google/config', { cache: 'no-store' });
+    const config = await configResponse.json();
+    if (!configResponse.ok || !config.clientId) {
+      button.textContent = 'Вход через Google временно недоступен';
+      if (error) error.textContent = 'На сервере не настроен вход через Google.';
+      return;
+    }
+    await new Promise((resolve, reject) => {
+      if (window.google?.accounts?.id) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Не удалось загрузить Google Sign-In'));
+      document.head.appendChild(script);
+    });
+    window.google.accounts.id.initialize({
+      client_id: config.clientId,
+      callback: async response => {
+        if (error) error.textContent = '';
+        button.setAttribute('aria-busy', 'true');
+        try {
+          const result = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }),
+            cache: 'no-store'
+          });
+          const data = await result.json().catch(() => ({}));
+          if (!result.ok) throw new Error(data.error || 'Не удалось войти через Google');
+          if (!data.token || !data.user) throw new Error('Сервер вернул некорректный ответ.');
+          saveSession(data);
+          await startPresence();
+          location.replace('profile.html');
+        } catch (e) {
+          if (error) error.textContent = e.message || 'Не удалось войти через Google';
+        } finally {
+          button.removeAttribute('aria-busy');
+        }
+      },
+      auto_select: false
+    });
+    window.google.accounts.id.renderButton(button, {
+      theme: 'outline', size: 'large', shape: 'rectangular',
+      width: Math.min(360, Math.max(240, Math.floor(button.getBoundingClientRect().width || 360))),
+      text: 'continue_with', logo_alignment: 'left'
+    });
+  } catch (e) {
+    button.textContent = 'Не удалось загрузить вход через Google';
+    if (error) error.textContent = e.message || 'Проверь соединение и попробуй ещё раз.';
+  }
+}
+
 function installMobileMenu(){const t=document.querySelector('.topbar'),n=document.querySelector('.topbar nav');if(!t||!n)return;let b=document.getElementById('epmMobileToggle'),p=document.getElementById('epmMobilePanel');if(!b){b=document.createElement('button');b.id='epmMobileToggle';b.className='epm-mobile-toggle';b.type='button';b.innerHTML='<span></span><span></span><span></span>';t.insertBefore(b,n);p=document.createElement('div');p.id='epmMobilePanel';p.className='epm-mobile-panel';p.innerHTML='<div class="epm-mobile-drawer"><div class="epm-mobile-panel-head"><b>EPM</b><button id="epmMobileClose" type="button">×</button></div><div class="epm-mobile-links"></div></div>';document.body.appendChild(p);b.onclick=()=>p.classList.add('show');p.querySelector('#epmMobileClose').onclick=()=>p.classList.remove('show');p.onclick=e=>{if(e.target===p)p.classList.remove('show')}}p.querySelector('.epm-mobile-links').innerHTML=n.innerHTML;p.querySelectorAll('a').forEach(a=>a.onclick=()=>p.classList.remove('show'))}
 function setupNotifications(){const b=document.getElementById('epmNotifyButton');if(!b||b.dataset.ready)return;b.dataset.ready='1';const p=document.createElement('div');p.id='epmNotifyPanel';p.className='epm-notify-panel';p.innerHTML='<div class="epm-notify-head"><b>Уведомления</b><button id="epmNotifyRead" type="button">Прочитать всё</button></div><div id="epmNotifyList" class="epm-notify-list"><div class="epm-notify-empty">Уведомлений нет.</div></div>';document.body.appendChild(p);b.onclick=async e=>{e.stopPropagation();p.classList.toggle('show');if(p.classList.contains('show'))await loadNotifications()};p.querySelector('#epmNotifyRead').onclick=async()=>{await fetch('/api/notifications/read',{method:'POST',headers:{Authorization:'Bearer '+getToken()}}).catch(()=>{});loadNotifications()};loadNotifications();clearInterval(window.__epmNotifyTimer);window.__epmNotifyTimer=setInterval(loadNotifications,30000)}
 async function loadNotifications(){const l=document.getElementById('epmNotifyList'),c=document.getElementById('epmNotifyCount');if(!l)return;try{const r=await fetch('/api/notifications',{headers:{Authorization:'Bearer '+getToken()},cache:'no-store'}),d=await r.json();if(!r.ok)throw 0;if(c)c.textContent=String(d.unread||0);l.innerHTML=(d.notifications||[]).map(n=>{const i=n.type==='topic_reply'?'💬':n.type==='mention'?'@':n.type==='admin_action'?'🛡️':n.type==='punishment'?'🔨':'👤';return '<a class="epm-notify-item '+(n.isRead?'':'unread')+'" href="'+escapeHtml(n.url||'#')+'"><span class="epm-notify-icon">'+i+'</span><span><b>'+escapeHtml(n.title||'Уведомление')+'</b><small>'+escapeHtml(n.body||'')+'</small><em>'+escapeHtml(new Date(n.createdAt).toLocaleString('ru-RU'))+'</em></span></a>'}).join('')||'<div class="epm-notify-empty">Уведомлений нет.</div>'}catch{if(c)c.textContent='0';l.innerHTML='<div class="epm-notify-empty">Уведомления недоступны.</div>'}}
