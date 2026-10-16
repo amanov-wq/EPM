@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { pool, initDatabase } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,6 +65,23 @@ function verifyPassword(password,stored) {
 }
 
 const AUTH_SECRET = process.env.EPM_AUTH_SECRET || crypto.createHash('sha256').update(process.env.DATABASE_URL || 'EPM-PERSISTENT-AUTH-SECRET').digest('hex');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '865269820362-3otitg8u4apfqtbvbr3c81t11tpc708s.apps.googleusercontent.com';
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+function googleNickname(name, email) {
+  return String(name || email?.split('@')[0] || 'Google')
+    .normalize('NFKC').replace(/[^A-Za-zА-Яа-яЁё0-9_]/g, '').slice(0, 18) || 'Google';
+}
+async function uniqueGoogleNickname(base) {
+  let nickname = base, suffix = 1;
+  while (true) {
+    const exists = pool
+      ? (await pool.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1) LIMIT 1', [nickname])).rows[0]
+      : read('users').find(u => String(u.nickname || '').toLowerCase() === nickname.toLowerCase());
+    if (!exists) return nickname;
+    const tail = String(suffix++);
+    nickname = (base.slice(0, Math.max(3, 24 - tail.length)) + tail).slice(0, 24);
+  }
+}
 const TOKEN_TTL = 1000 * 60 * 60 * 24 * 30;
 function makeToken(userId) {
   const exp = Date.now() + TOKEN_TTL;
@@ -215,6 +233,58 @@ app.post('/api/auth/login',async(req,res)=>{try{
   if(!String(user.password||'').startsWith('scrypt$')){user.password=hashPassword(password);await saveUser(user);}
   return res.json({token:makeToken(user.id),user:safeUser(user)});
 }catch(error){console.error('Login error:',error);res.status(500).json({error:'Ошибка входа'});}});
+app.get('/api/auth/google/config', (req, res) => res.json({ clientId: GOOGLE_CLIENT_ID || null }));
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const credential = String(req.body.credential || '').trim();
+    if (!credential) return res.status(400).json({ error: 'Google не передал данные авторизации' });
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ error: 'Не удалось подтвердить Google-аккаунт' });
+    }
+
+    let user = null;
+    if (pool) {
+      const result = await pool.query(
+        'SELECT id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,google_sub AS "googleSub",email,created_at AS "createdAt" FROM users WHERE google_sub=$1 OR LOWER(email)=LOWER($2) LIMIT 1',
+        [payload.sub, payload.email]
+      );
+      user = result.rows[0] || null;
+    } else {
+      user = read('users').find(u =>
+        u.googleSub === payload.sub ||
+        String(u.email || '').toLowerCase() === String(payload.email).toLowerCase()
+      ) || null;
+    }
+
+    if (user) {
+      if (user.blocked) return res.status(403).json({ error: 'Аккаунт заблокирован' });
+      user.googleSub = payload.sub;
+      user.email = payload.email;
+      if (!user.avatar && payload.picture) user.avatar = payload.picture;
+      await saveUser(user);
+      return res.json({ token: makeToken(user.id), user: safeUser(user) });
+    }
+
+    const nickname = await uniqueGoogleNickname(googleNickname(payload.name, payload.email));
+    const id = pool
+      ? Number((await pool.query('SELECT COALESCE(MAX(id),0)+1 AS id FROM users')).rows[0].id)
+      : nextId(read('users'));
+    user = {
+      id, nickname, password: hashPassword(crypto.randomBytes(32).toString('hex')),
+      role: 'Пользователь', description: 'Новый участник EPM',
+      avatar: payload.picture || '', posts: 0, topics: 0, level: 1,
+      experience: 0, blocked: false, googleSub: payload.sub,
+      email: payload.email, createdAt: new Date().toISOString()
+    };
+    await saveUser(user);
+    return res.status(201).json({ token: makeToken(user.id), user: safeUser(user), created: true });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    return res.status(401).json({ error: 'Не удалось выполнить вход через Google. Попробуй ещё раз.' });
+  }
+});
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:safeUser(req.user)}));
 app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
 
