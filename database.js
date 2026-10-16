@@ -30,13 +30,6 @@ async function initDatabase() {
     CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub_unique_idx ON users(google_sub) WHERE google_sub IS NOT NULL;
     CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users(LOWER(email)) WHERE email IS NOT NULL;
 
-    CREATE TABLE IF NOT EXISTS oauth_login_codes (
-      code_hash TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      expires_at TIMESTAMPTZ NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS oauth_login_codes_expiry_idx ON oauth_login_codes(expires_at);
-
     CREATE TABLE IF NOT EXISTS online_sessions (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW()
