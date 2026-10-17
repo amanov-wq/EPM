@@ -1,11 +1,26 @@
 # EPM Minecraft Bridge
 
-Запускается рядом с Minecraft. Render не читает серверные файлы напрямую.
+Плагин отправляет события блокировки и разблокировки в историю на сайте EPM. Сам плагин ставится в папку `plugins` каждого Paper/Spigot-сервера.
 
-EssentialsX: EPM_MODE=Estamon Creative или Estamon Survial, EPM_API_KEY, EPM_SERVER_ROOT. По умолчанию читается banned-players.json.
+## Режимы и плагины наказаний
 
-AdvancedBan: EPM_MODE=Estamon Grief + EPM_SOURCE_FILE с JSON-экспортом. Если наказания в БД — EPM_SOURCE_COMMAND должен вывести JSON-массив с id/name/reason/source/expires.
+| Режим сайта | Плагин наказаний | Конфигурация моста |
+|---|---|---|
+| BloodShedWorld | Essentials | `config-blood.yml` |
+| Estamon Creative | Essentials | `config-creative.yml` |
+| Estamon Grief | AdvancedBan | `config.yml` |
+| Estamon Survial | Essentials | `config-survival.yml` |
 
-В Render создайте EPM_GRIEF_API_KEY, EPM_CREATIVE_API_KEY, EPM_SURVIVAL_API_KEY и передайте соответствующий ключ мосту. Ключи не публиковать.
+## Установка
 
-Мост отправляет BAN при появлении записи и UNBAN после её исчезновения. Для TPS сервер может POST'ить /api/integrations/server-status с online,players,maxPlayers,version,tps. Без этого сайт использует mcstatus.io для online/players/version.
+1. Скачай собранный `epm-punishment-bridge-1.0.0.jar` из GitHub Actions artifact **epm-punishment-bridge** (workflow Build EPM Punishment Bridge).
+2. На каждом Minecraft-сервере положи JAR в `plugins/EPMPunishmentBridge.jar`.
+3. Скопируй соответствующий шаблон конфигурации в `plugins/EPMPunishmentBridge/config.yml`.
+4. В Render → Environment задай `EPM_GRIEF_API_KEY`, `EPM_CREATIVE_API_KEY`, `EPM_SURVIVAL_API_KEY`, `EPM_BLOOD_API_KEY`. Для каждого сервера вставь его соответствующий секрет в `api-key`. Не публикуй ключи в чате или репозитории.
+5. Перезапусти Minecraft-сервер.
+
+Мост отслеживает команды `ban`, `tempban`, `unban`, `pardon`, `unbanip` и `pardonip`. При разблокировке он отправляет событие `UNBAN`; сайт показывает статусы **«Забанен(а)»** и **«Разблокирован(а)»** в соответствующих вкладках.
+
+> Важно: мост фиксирует команды, выполненные через чат/консоль. Если администраторы меняют наказания напрямую в базе плагина или через команды, которые не входят в список, событие не будет замечено. Проверяй, что конкретная версия Essentials/AdvancedBan использует указанные команды.
+
+Для статуса сервера мост может отправлять `POST /api/integrations/server-status` с `online`, `players`, `maxPlayers`, `version` и `tps`.
