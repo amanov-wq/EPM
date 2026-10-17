@@ -8,6 +8,10 @@ mode: "Estamon Grief"
 commands:
   - ban
   - tempban
+  - unban
+  - pardon
+  - unbanip
+  - pardonip
 
 # Delay after the command before sending the record.
 send-delay-ticks: 20
