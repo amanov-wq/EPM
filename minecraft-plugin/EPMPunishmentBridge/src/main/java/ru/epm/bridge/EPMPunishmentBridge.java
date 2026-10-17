@@ -87,6 +87,7 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
         String target = a[1];
         if (target.length() < 1 || target.length() > 24 || target.contains(":")) return null;
 
+        boolean unban = command.equals("unban") || command.equals("pardon") || command.equals("unbanip") || command.equals("pardonip");
         boolean temp = command.equals("tempban") || command.equals("tempbanip");
         int reasonStart = 2;
         Date expires = null;
@@ -107,7 +108,8 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
 
         Parsed p = new Parsed();
         p.nickname = target;
-        p.reason = reason.length() == 0 ? "Не указана" : reason.toString();
+        p.type = unban ? "UNBAN" : "BAN";
+        p.reason = reason.length() == 0 ? (unban ? "Разблокировка на сервере" : "Не указана") : reason.toString();
         p.moderator = moderator;
         p.expires = expires;
         p.raw = line;
@@ -162,9 +164,9 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
         }
         payload.append(",");
         payload.append("\"mode\":\"").append(json(mode)).append("\",");
-        payload.append("\"type\":\"BAN\",");
+        payload.append("\"type\":\"").append(json(p.type)).append("\",");
         payload.append("\"server\":\"").append(json(mode)).append("\",");
-        payload.append("\"externalId\":\"").append(externalId).append("\"");
+        payload.append("\"externalId\":\"").append("UNBAN".equals(p.type) ? "" : externalId).append("\"");
         payload.append("}");
 
         HttpURLConnection con = null;
@@ -250,7 +252,7 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
     }
 
     private static final class Parsed {
-        String nickname, reason, moderator, raw;
+        String nickname, reason, moderator, raw, type;
         Date expires;
     }
 }
