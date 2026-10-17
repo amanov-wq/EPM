@@ -1,0 +1,14 @@
+api-url: "https://epmofficial.onrender.com"
+api-key: "PUT_EPM_SURVIVAL_API_KEY_HERE"
+mode: "Estamon Survial"
+
+# Essentials / EssentialsX commands
+commands:
+  - ban
+  - tempban
+  - unban
+  - pardon
+  - unbanip
+  - pardonip
+
+send-delay-ticks: 20
