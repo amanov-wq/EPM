@@ -355,6 +355,8 @@
 .profile-message-text{padding:1px 2px 0;color:#d9dde5;font:500 15px/1.6 Rajdhani;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 .profile-message-text p,.profile-message-text div{margin:.25em 0}
 .profile-message-text span{max-width:100%}
+/* Ответы на сообщения профиля */
+.profile-message-actions{display:flex;align-items:center;gap:8px;margin-top:12px}.profile-message-reply{border:1px solid rgba(143,121,209,.42);border-radius:7px;background:rgba(115,94,181,.12);color:#c9baf1;padding:6px 12px;font:600 12px Oxanium;cursor:pointer}.profile-message-reply:hover{background:rgba(115,94,181,.25);color:#fff}.profile-message-actions .profile-message-delete{margin-top:0}
 .profile-message-delete{margin-top:12px;border:0;border-top:1px solid rgba(255,255,255,.05);padding:9px 0 0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer}
 .profile-message-delete:hover{color:#e19aa3}
 @media(max-width:600px){
@@ -653,11 +655,24 @@
           '<span class="profile-message-date">'+esc(when)+'</span>'+
           '</div>'+
           '<div class="profile-message-text">'+sanitizeEditorHtml(m.content||'')+'</div>'+
-          (canDelete?'<button class="profile-message-delete" type="button" data-delete-message="'+Number(m.id)+'">Удалить</button>':'')+
+          '<div class="profile-message-actions"><button class="profile-message-reply" type="button" data-reply-message="'+Number(m.id)+'" data-reply-author="'+esc(m.nickname||'Пользователь')+'">Ответить</button>'+(canDelete?'<button class="profile-message-delete" type="button" data-delete-message="'+Number(m.id)+'">Удалить</button>':'')+'</div>'+
           '</article>';
       }).join('');
       list.querySelectorAll('[data-delete-message]').forEach(button=>{
         button.onclick=()=>deleteProfileMessage(profileId,Number(button.dataset.deleteMessage),button);
+      });
+      list.querySelectorAll('[data-reply-message]').forEach(button=>{
+        button.onclick=()=>{
+          const editor=document.getElementById('profileMessageInput');
+          const status=document.getElementById('messageStatus');
+          if(!token()){status.textContent='Войдите в аккаунт, чтобы ответить.';return;}
+          editor.innerHTML='<p><b>Ответ пользователю '+esc(button.dataset.replyAuthor)+':</b> </p><p></p>';
+          editor.focus();
+          const range=document.createRange();range.selectNodeContents(editor.lastElementChild||editor);range.collapse(false);
+          const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+          status.textContent='Напишите ответ и нажмите «Отправить».';
+          editor.scrollIntoView({behavior:'smooth',block:'center'});
+        };
       });
     }catch(error){
       list.innerHTML='<div class="profile-message-status">'+esc(error.message)+'</div>';
