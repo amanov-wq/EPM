@@ -301,12 +301,34 @@ app.post('/api/auth/logout',(req,res)=>res.json({ok:true}));
 app.get('/api/notifications',auth,async(req,res)=>{
   try{
     if(pool){
-      const result=await pool.query(`SELECT n.id,n.type,n.title,n.body,n.url,n.is_read AS "isRead",n.created_at AS "createdAt",u.id AS "actorId",u.nickname AS "actorNickname",u.avatar AS "actorAvatar" FROM notifications n LEFT JOIN users u ON u.id=n.actor_id WHERE n.recipient_id=$1 ORDER BY n.created_at DESC,n.id DESC LIMIT 50`,[req.user.id]);
-      const unread=await pool.query('SELECT COUNT(*)::int AS count FROM notifications WHERE recipient_id=$1 AND is_read=FALSE',[req.user.id]);
-      return res.json({notifications:result.rows,unread:Number(unread.rows[0]?.count||0)});
+      // Fetch the list and unread count in one SQL statement so they share the same
+      // PostgreSQL snapshot and cannot disagree during a concurrent notification insert.
+      const result=await pool.query(`
+        SELECT
+          COALESCE((
+            SELECT json_agg(row_to_json(item) ORDER BY item."createdAt" DESC,item.id DESC)
+            FROM (
+              SELECT n.id,n.type,n.title,n.body,n.url,n.is_read AS "isRead",
+                     n.created_at AS "createdAt",u.id AS "actorId",
+                     u.nickname AS "actorNickname",u.avatar AS "actorAvatar"
+              FROM notifications n
+              LEFT JOIN users u ON u.id=n.actor_id
+              WHERE n.recipient_id=$1
+              ORDER BY n.created_at DESC,n.id DESC
+              LIMIT 50
+            ) item
+          ),'[]'::json) AS notifications,
+          (SELECT COUNT(*)::int FROM notifications WHERE recipient_id=$1 AND is_read=FALSE) AS unread
+      `,[req.user.id]);
+      const row=result.rows[0]||{};
+      const notifications=Array.isArray(row.notifications)?row.notifications:[];
+      // Never report a positive unread count when there is no visible notification.
+      const unread=notifications.length?Number(row.unread||0):0;
+      return res.set('Cache-Control','no-store, no-cache, must-revalidate, private').json({notifications,unread});
     }
-    const rows=(global.__epmNotifications||[]).filter(n=>Number(n.recipientId)===Number(req.user.id)).slice(0,50);
-    res.json({notifications:rows,unread:rows.filter(n=>!n.isRead).length});
+    const rows=(global.__epmNotifications||[]).filter(n=>Number(n.recipientId)===Number(req.user.id)).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,50);
+    const unread=rows.length?rows.filter(n=>!n.isRead).length:0;
+    res.set('Cache-Control','no-store, no-cache, must-revalidate, private').json({notifications:rows,unread});
   }catch(error){console.error('Notifications load error:',error);res.status(500).json({error:'Не удалось загрузить уведомления'});}
 });
 app.post('/api/notifications/read',auth,async(req,res)=>{
