@@ -79,8 +79,10 @@ async function initDatabase() {
       author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       author TEXT NOT NULL,
       content TEXT NOT NULL,
+      reply_to_id INTEGER REFERENCES profile_messages(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE profile_messages ADD COLUMN IF NOT EXISTS reply_to_id INTEGER REFERENCES profile_messages(id) ON DELETE CASCADE;
 
     CREATE TABLE IF NOT EXISTS news (
       id SERIAL PRIMARY KEY,
