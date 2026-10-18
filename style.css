@@ -81,3 +81,10 @@ body{background:var(--epm-bg);color:var(--epm-text)}
 .epm-role.role-deputy-curator{border-color:var(--role-border)!important;background:linear-gradient(120deg,var(--role-bg),rgba(10,12,18,.78))!important;color:var(--role-color)!important;box-shadow:inset 0 0 14px var(--role-glow),0 0 12px var(--role-glow)!important;text-shadow:0 0 12px var(--role-glow)!important}
 .epm-role.role-mode-curator{border-color:var(--role-border)!important;background:linear-gradient(120deg,var(--role-bg),rgba(10,12,18,.78))!important;color:var(--role-color)!important;box-shadow:inset 0 0 14px var(--role-glow),0 0 12px var(--role-glow)!important;text-shadow:0 0 12px var(--role-glow)!important}
 .epm-role.role-creator{border-color:var(--role-border)!important;background:linear-gradient(120deg,var(--role-bg),rgba(10,12,18,.78))!important;color:var(--role-color)!important;box-shadow:inset 0 0 14px var(--role-glow),0 0 12px var(--role-glow)!important;text-shadow:0 0 12px var(--role-glow)!important}
+
+
+/* Общая кнопка «Соцсети» во всех шапках EPM */
+.socials-nav-standalone{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:10px 13px;border:1px solid rgba(142,121,207,.42);border-radius:7px;background:rgba(115,94,181,.12);color:#c9baf1;text-decoration:none;font:700 13px Oxanium;white-space:nowrap;transition:background .18s ease,border-color .18s ease}
+.socials-nav-standalone:hover{background:rgba(115,94,181,.25);border-color:rgba(142,121,207,.7);color:#fff}
+@media(max-width:900px){.topbar{gap:12px}.socials-nav-standalone{padding:9px 10px;font-size:12px}}
+@media(max-width:650px){.topbar{flex-wrap:wrap;height:auto;min-height:68px;padding-top:10px;padding-bottom:10px}.topbar nav{order:3;flex-basis:100%;width:100%}.socials-nav-standalone{margin-left:auto}}
