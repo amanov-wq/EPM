@@ -207,6 +207,14 @@ app.post('/api/auth/register',async(req,res)=>{try{
       await client.query("SELECT pg_advisory_xact_lock(hashtext('epm-register-nickname'))");
       const duplicate=await client.query('SELECT id FROM users WHERE LOWER(nickname)=LOWER($1) LIMIT 1',[nickname]);
       if(duplicate.rows[0]){await client.query('ROLLBACK');return res.status(409).json({error:'Такой ник уже зарегистрирован'});}
+      // The users table may have been populated by an import or an older deployment.
+      // Resync the serial sequence so a stale sequence cannot collide with an existing ID
+      // and be incorrectly reported to the visitor as a duplicate nickname.
+      await client.query(`SELECT setval(
+        pg_get_serial_sequence('users','id'),
+        COALESCE((SELECT MAX(id) FROM users), 1),
+        EXISTS(SELECT 1 FROM users)
+      )`);
       const result=await client.query(`INSERT INTO users(nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at)
         VALUES($1,$2,'Пользователь','Новый участник EPM','',0,0,1,0,FALSE,NOW())
         RETURNING id,nickname,password,role,description,avatar,posts,topics,level,experience,blocked,created_at AS "createdAt"`,
@@ -221,7 +229,7 @@ app.post('/api/auth/register',async(req,res)=>{try{
     users.push(user);write('users',users);
   }
   return res.status(201).json({token:makeToken(user.id),user:safeUser(user)});
-}catch(error){console.error('Register error:',error);if(error.code==='23505')return res.status(409).json({error:'Такой ник уже зарегистрирован'});res.status(500).json({error:'Ошибка регистрации'});}});
+}catch(error){console.error('Register error:',error);if(error.code==='23505'&&/nickname/i.test(String(error.constraint||'')))return res.status(409).json({error:'Такой ник уже зарегистрирован'});res.status(500).json({error:'Не удалось создать аккаунт. Попробуйте ещё раз.'});}});
 
 app.post('/api/auth/login',async(req,res)=>{try{
   const nickname=String(req.body.nickname||'').trim(),password=String(req.body.password||'');
