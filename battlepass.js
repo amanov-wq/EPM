@@ -32,6 +32,18 @@ const rewards=[
 {level:29,icon:'🐉',name:'Покоритель дракона',desc:'Редкий титул финального этапа.',kind:'Титул'},
 {level:30,icon:'🏆',name:'Легенда EPM',desc:'Финальная награда сезона и 150,000 игровой валюты.',kind:'$150,000 + титул',money:150000}
 ];
+const premiumRewards=[
+{level:3,icon:'✨',name:'Аура незера',desc:'Эксклюзивный визуальный стиль сезона.',kind:'Косметика'},
+{level:6,icon:'🪙',name:'Золотой запас',desc:'Бонусная игровая валюта.',kind:'Бонус'},
+{level:9,icon:'🛡️',name:'Реликтовый комплект',desc:'Тематический набор для приключений.',kind:'Набор'},
+{level:12,icon:'💜',name:'Премиум-титул',desc:'Особая отметка владельца пропуска.',kind:'Титул'},
+{level:15,icon:'💎',name:'Кристаллы сезона',desc:'Ценная награда на середине пути.',kind:'Ресурсы'},
+{level:18,icon:'🔥',name:'Пламенный след',desc:'Редкая сезонная косметика.',kind:'Косметика'},
+{level:21,icon:'👑',name:'Королевский набор',desc:'Премиальный комплект наград.',kind:'Набор'},
+{level:24,icon:'🌌',name:'Звёздный эффект',desc:'Уникальный коллекционный эффект.',kind:'Косметика'},
+{level:27,icon:'🐉',name:'Драконий титул',desc:'Редкий титул для профиля.',kind:'Титул'},
+{level:30,icon:'🏆',name:'EPM Premium Legend',desc:'Главная эксклюзивная награда сезона.',kind:'Эксклюзив'}
+];
 let state=load();
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');return{xp:Math.max(0,Number(s.xp)||0),balance:Math.max(10000,Number(s.balance)||10000),claimed:Array.isArray(s.claimed)?s.claimed.map(Number):[]}}catch{return{xp:0,balance:10000,claimed:[]}}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
@@ -41,4 +53,10 @@ function render(){const lv=level(),within=lv===30?1000:state.xp%1000;document.ge
 function claim(lv){const r=rewards.find(x=>x.level===lv);if(!r||level()<lv||state.claimed.includes(lv))return;if(r.money)state.balance+=r.money;state.claimed.push(lv);save();render();toast(r.donate?'Награда отмечена. Для выдачи привилегии обратись к администрации.':'Награда получена!')}
 document.getElementById('claimAll').onclick=()=>{let count=0;rewards.filter(r=>r.level<=level()&&!state.claimed.includes(r.level)).forEach(r=>{if(r.money)state.balance+=r.money;state.claimed.push(r.level);count++});save();render();toast(count?'Получено наград: '+count:'Пока нет новых наград')};
 render();
+function renderPremium(){
+ const root=document.getElementById('premiumRewards');
+ if(!root)return;
+ root.innerHTML=premiumRewards.map(r=>'<article class="bp-premium-reward"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><span class="bp-chip" style="background:#392b15;color:#ffdf8d">PREMIUM</span></div></article>').join('');
+}
+renderPremium();
 })();
