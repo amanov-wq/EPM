@@ -28,7 +28,7 @@
 <main class="topic-page"><a class="topic-back" href="forum.html">← ВЕРНУТЬСЯ К ФОРУМУ</a><div id="topic" class="topic-empty">Загрузка темы...</div></main>
 <footer class="site-footer">EPM © 2026</footer>
 <div class="modal" id="guestModal"><div class="modal-box"><div class="eyebrow">ДОСТУП К ФУНКЦИИ</div><h2>Вы гость</h2><p>Чтобы отвечать на темы, войдите или зарегистрируйтесь в EPM.</p><div class="modal-actions"><a class="auth-btn secondary" href="login.html">Войти</a><a class="auth-btn primary" href="register.html">Регистрация</a></div><button class="modal-close" id="closeGuest">Закрыть</button></div></div>
-<script src="auth.js"></script>
+<script src="auth.js?v=20261018-topicfix"></script>
 <script>
 const topicId=new URLSearchParams(location.search).get('id');
 const root=document.getElementById('topic');
@@ -42,7 +42,7 @@ const initials=name=>String(name||'EPM').trim().slice(0,2).toUpperCase();
 function epmRoleClass(role){const roles=["Пользователь","Стример","Стажер","Мл.Хелпер","Хелпер","Ст.Хелпер","Мл.Модератор","Модератор","Ст.Модератор","Куратор по рекламе","Куратор по команде проекта","Зам Куратор","Куратор режима","Создатель"];const classes=["role-user","role-streamer","role-trainee","role-junior-helper","role-helper","role-senior-helper","role-junior-moderator","role-moderator","role-senior-moderator","role-ad-curator","role-team-curator","role-deputy-curator","role-mode-curator","role-creator"];const i=roles.indexOf(String(role||'Пользователь'));return classes[i<0?0:i]};
 function avatarMarkup(author,cls){const a=author||{};return a.avatar?`<div class="${cls}"><img src="${esc(a.avatar)}" alt="" loading="lazy"></div>`:`<div class="${cls}">${esc(initials(a.nickname))}</div>`}
 function showGuest(){guestModal.classList.add('show')}
-async function request(url,options={}){const headers={...(options.headers||{})};const token=getTokenSafe();if(token)headers.Authorization='Bearer '+token;const r=await fetch(url,{...options,headers});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Ошибка операции');return d}
+async function request(url,options={}){const headers={...(options.headers||{})};const token=getTokenSafe();if(token)headers.Authorization='Bearer '+token;const r=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(15000),...options,headers});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Ошибка операции ('+r.status+')');return d}
 async function loadTopic(){
  if(!topicId){root.innerHTML='<div class="topic-empty">Тема не указана.</div>';return}
  try{
@@ -64,7 +64,7 @@ async function loadTopic(){
   document.querySelectorAll('[data-delete-reply]').forEach(btn=>btn.onclick=async()=>{if(!confirm('Удалить этот ответ?'))return;try{await request('/api/topics/'+topicId+'/replies/'+Number(btn.dataset.deleteReply),{method:'DELETE'});await loadTopic()}catch(e){alert(e.message)}});
   if(user&&!t.closed){document.getElementById('replyForm').onsubmit=async e=>{e.preventDefault();const btn=e.target.querySelector('button');const text=document.getElementById('replyText').value.trim();if(!text)return;btn.disabled=true;try{await request('/api/topics/'+topicId+'/replies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:text})});await loadTopic()}catch(e){alert(e.message)}finally{btn.disabled=false}}}
   if(!user&&!t.closed)document.getElementById('guestReply').onclick=showGuest;
- }catch(e){root.className='topic-empty';root.innerHTML='<strong>Не удалось загрузить тему</strong><br><span>Возможно, тема была удалена.</span>';console.error(e)}
+ }catch(e){root.className='topic-empty';root.innerHTML='<strong>Не удалось загрузить тему</strong><br><span>'+esc(e?.name==='TimeoutError'?'Сервер долго не отвечает. Обновите страницу через несколько секунд.':(e?.message||'Проверьте соединение и обновите страницу.'))+'</span>';console.error('EPM topic load failed:',e)}
 }
 document.getElementById('closeGuest').onclick=()=>guestModal.classList.remove('show');
 guestModal.onclick=e=>{if(e.target===guestModal)guestModal.classList.remove('show')};
