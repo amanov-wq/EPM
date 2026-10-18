@@ -8,7 +8,8 @@ let searchTimer=null,searchSequence=0,lastQuery='';
 function renderUsers(users){
   results.innerHTML=users.length?users.map(u=>{
     const avatar=u.avatar?String(u.avatar):'images/default-avatar.png';
-    return '<a class="search-result" href="profile.html?id='+Number(u.id)+'"><img class="search-avatar" src="'+esc(avatar)+'" alt=""><div class="search-info"><b>'+esc(u.nickname||'Пользователь')+'</b><span class="epm-role '+epmRoleClass(u.role)+'">'+esc(u.role||'Пользователь')+'</span></div></a>';
+    const fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%23151a23'/%3E%3Ccircle cx='32' cy='24' r='12' fill='%238f79d1'/%3E%3Cpath d='M10 60c1-14 10-22 22-22s21 8 22 22' fill='%238f79d1'/%3E%3C/svg%3E";
+    return '<a class="search-result" href="profile.html?id='+Number(u.id)+'"><img class="search-avatar" src="'+esc(avatar)+'" onerror="this.onerror=null;this.src=\''+fallback+'\'" alt="Аватар '+esc(u.nickname||'пользователя')+'"><div class="search-info"><b>'+esc(u.nickname||'Пользователь')+'</b><span class="epm-role '+epmRoleClass(u.role)+'">'+esc(u.role||'Пользователь')+'</span></div></a>';
   }).join(''):'<div class="search-empty">Пользователи не найдены.</div>';
 }
 async function search(){
