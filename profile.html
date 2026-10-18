@@ -356,6 +356,8 @@
 .profile-message-text p,.profile-message-text div{margin:.25em 0}
 .profile-message-text span{max-width:100%}
 /* Ответы на сообщения профиля */
+.profile-message-thread{display:block;margin:0 0 14px}.profile-message-replies{margin:10px 0 0 28px;padding:0 0 0 14px;border-left:2px solid rgba(143,121,209,.55);display:flex;flex-direction:column;gap:10px}.profile-message-nested-reply{margin:0;padding:12px 14px;border:1px solid rgba(143,121,209,.4);border-radius:9px;background:linear-gradient(135deg,rgba(115,94,181,.13),rgba(13,17,25,.88));box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}.profile-message-replying{outline:1px solid rgba(143,121,209,.65);outline-offset:3px}.profile-message-reply-cancel{margin-top:8px;border:1px solid rgba(143,121,209,.4);border-radius:6px;background:transparent;color:#c9baf1;padding:5px 9px;cursor:pointer;font:600 11px Oxanium}@media(max-width:600px){.profile-message-replies{margin-left:10px;padding-left:9px}.profile-message-nested-reply{padding:10px}}
+
 .profile-message-reply-box{margin:12px 0 0 42px;padding:12px 14px;border:1px solid rgba(143,121,209,.38);border-left:3px solid #8f79d1;border-radius:9px;background:linear-gradient(135deg,rgba(115,94,181,.13),rgba(13,17,25,.7));box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}.profile-message-reply-box .reply-box-title{display:flex;align-items:center;gap:7px;margin:0 0 6px;color:#c9baf1;font:700 11px Oxanium;letter-spacing:.04em}.profile-message-reply-box .reply-box-content{color:#c4cad5;font:500 13px/1.55 Rajdhani;overflow-wrap:anywhere}.profile-message-reply-box .reply-box-content p{margin:3px 0}@media(max-width:600px){.profile-message-reply-box{margin-left:12px;padding:10px 11px}}
 .profile-message-actions{display:flex;align-items:center;gap:8px;margin-top:12px}.profile-message-reply{border:1px solid rgba(143,121,209,.42);border-radius:7px;background:rgba(115,94,181,.12);color:#c9baf1;padding:6px 12px;font:600 12px Oxanium;cursor:pointer}.profile-message-reply:hover{background:rgba(115,94,181,.25);color:#fff}.profile-message-actions .profile-message-delete{margin-top:0}
 .profile-message-delete{margin-top:12px;border:0;border-top:1px solid rgba(255,255,255,.05);padding:9px 0 0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer}
@@ -646,11 +648,15 @@
         list.innerHTML='<div class="profile-message-status">Пока сообщений нет.</div>';
         return;
       }
-      list.innerHTML=data.messages.map(m=>{
+      const messages=data.messages||[];
+      const byId=new Map(messages.map(m=>[Number(m.id),m]));
+      const children=new Map();
+      messages.forEach(m=>{const parentId=Number(m.replyToId||0);if(parentId&&byId.has(parentId)){if(!children.has(parentId))children.set(parentId,[]);children.get(parentId).push(m)}});
+      const renderOne=(m,isReply=false)=>{
         const avatarHtml=m.avatar?'<img src="'+esc(m.avatar)+'" alt="">':'<span>'+initials(m.nickname)+'</span>';
         const when=date(m.createdAt);
         const canDelete=meId>0&&(Number(m.authorId)===meId||Number(profileId)===meId);
-        return '<article class="profile-message" data-message-id="'+Number(m.id)+'">'+
+        return '<article class="profile-message'+(isReply?' profile-message-nested-reply':'')+'" data-message-id="'+Number(m.id)+'">'+
           '<div class="profile-message-head">'+
           '<a class="profile-message-author" href="profile.html?id='+Number(m.authorId)+'">'+avatarHtml+esc(m.nickname)+'</a>'+
           '<span class="profile-message-date">'+esc(when)+'</span>'+
@@ -658,7 +664,12 @@
           '<div class="profile-message-text">'+sanitizeEditorHtml(m.content||'')+'</div>'+
           '<div class="profile-message-actions"><button class="profile-message-reply" type="button" data-reply-message="'+Number(m.id)+'" data-reply-author="'+esc(m.nickname||'Пользователь')+'">Ответить</button>'+(canDelete?'<button class="profile-message-delete" type="button" data-delete-message="'+Number(m.id)+'">Удалить</button>':'')+'</div>'+
           '</article>';
-      }).join('');
+      };
+      const roots=messages.filter(m=>!Number(m.replyToId||0)||!byId.has(Number(m.replyToId)));
+      list.innerHTML=roots.map(m=>{
+        const replies=children.get(Number(m.id))||[];
+        return '<div class="profile-message-thread">'+renderOne(m,false)+(replies.length?'<div class="profile-message-replies">'+replies.map(reply=>renderOne(reply,true)).join('')+'</div>':'')+'</div>';
+      }).join('')||'<div class="profile-message-status">Пока сообщений нет.</div>';
       list.querySelectorAll('[data-delete-message]').forEach(button=>{
         button.onclick=()=>deleteProfileMessage(profileId,Number(button.dataset.deleteMessage),button);
       });
@@ -667,12 +678,14 @@
           const editor=document.getElementById('profileMessageInput');
           const status=document.getElementById('messageStatus');
           if(!token()){status.textContent='Войдите в аккаунт, чтобы ответить.';return;}
-          const messageCard=button.closest('.profile-message');
-          document.querySelectorAll('.profile-message-inline-reply').forEach(node=>node.remove());
-          const replyBox=document.createElement('div');replyBox.className='profile-message-reply-box profile-message-inline-reply';
-          replyBox.innerHTML='<div class="reply-box-title">↳ ОТВЕТ НА СООБЩЕНИЕ</div><div class="reply-box-content">Ответ пользователю <b>'+esc(button.dataset.replyAuthor)+'</b></div>';
-          messageCard.appendChild(replyBox);
-          editor.innerHTML='<p><b>Ответ пользователю '+esc(button.dataset.replyAuthor)+':</b> </p><p></p>';
+          window.epmProfileReplyToId=Number(button.dataset.replyMessage)||0;
+          document.querySelectorAll('.profile-message-replying').forEach(node=>node.classList.remove('profile-message-replying'));
+          button.closest('.profile-message')?.classList.add('profile-message-replying');
+          let replyNotice=document.getElementById('profileReplyNotice');
+          if(!replyNotice){replyNotice=document.createElement('div');replyNotice.id='profileReplyNotice';replyNotice.className='profile-message-reply-box';editor.parentNode.insertBefore(replyNotice,editor);}
+          replyNotice.innerHTML='<div class="reply-box-title">↳ ОТВЕТ НА СООБЩЕНИЕ</div><div class="reply-box-content">Ответ пользователю <b>'+esc(button.dataset.replyAuthor)+'</b></div><button type="button" id="cancelProfileReply" class="profile-message-reply-cancel">Отменить ответ</button>';
+          document.getElementById('cancelProfileReply').onclick=()=>{window.epmProfileReplyToId=0;replyNotice.remove();document.querySelectorAll('.profile-message-replying').forEach(node=>node.classList.remove('profile-message-replying'));};
+          editor.innerHTML='<p></p>';
           editor.focus();
           const range=document.createRange();range.selectNodeContents(editor.lastElementChild||editor);range.collapse(false);
           const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
@@ -712,9 +725,12 @@
       await api('/api/profile/'+Number(profileOwnerId)+'/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({content})
+        body:JSON.stringify({content,replyToId:Number(window.epmProfileReplyToId)||null})
       });
       input.innerHTML='';
+      window.epmProfileReplyToId=0;
+      document.getElementById('profileReplyNotice')?.remove();
+      document.querySelectorAll('.profile-message-replying').forEach(node=>node.classList.remove('profile-message-replying'));
       status.textContent='Сообщение отправлено.';
       await loadProfileMessages(profileOwnerId);
     }catch(error){
