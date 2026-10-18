@@ -59,4 +59,14 @@ function renderPremium(){
  root.innerHTML=premiumRewards.map(r=>'<article class="bp-premium-reward"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><span class="bp-chip" style="background:#392b15;color:#ffdf8d">PREMIUM</span></div></article>').join('');
 }
 renderPremium();
+const buyPremium=document.getElementById('buyPremium');
+const premiumModal=document.getElementById('premiumModal');
+const closePremiumModal=document.getElementById('closePremiumModal');
+function openPremiumModal(){if(!premiumModal)return;premiumModal.hidden=false;document.body.style.overflow='hidden';closePremiumModal?.focus()}
+function hidePremiumModal(){if(!premiumModal)return;premiumModal.hidden=true;document.body.style.overflow='';buyPremium?.focus()}
+buyPremium?.addEventListener('click',openPremiumModal);
+closePremiumModal?.addEventListener('click',hidePremiumModal);
+document.getElementById('premiumNotReady')?.addEventListener('click',hidePremiumModal);
+premiumModal?.addEventListener('click',e=>{if(e.target===premiumModal)hidePremiumModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&premiumModal&&!premiumModal.hidden)hidePremiumModal()});
 })();
