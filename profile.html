@@ -356,6 +356,7 @@
 .profile-message-text p,.profile-message-text div{margin:.25em 0}
 .profile-message-text span{max-width:100%}
 /* Ответы на сообщения профиля */
+.profile-message-reply-box{margin:12px 0 0 42px;padding:12px 14px;border:1px solid rgba(143,121,209,.38);border-left:3px solid #8f79d1;border-radius:9px;background:linear-gradient(135deg,rgba(115,94,181,.13),rgba(13,17,25,.7));box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}.profile-message-reply-box .reply-box-title{display:flex;align-items:center;gap:7px;margin:0 0 6px;color:#c9baf1;font:700 11px Oxanium;letter-spacing:.04em}.profile-message-reply-box .reply-box-content{color:#c4cad5;font:500 13px/1.55 Rajdhani;overflow-wrap:anywhere}.profile-message-reply-box .reply-box-content p{margin:3px 0}@media(max-width:600px){.profile-message-reply-box{margin-left:12px;padding:10px 11px}}
 .profile-message-actions{display:flex;align-items:center;gap:8px;margin-top:12px}.profile-message-reply{border:1px solid rgba(143,121,209,.42);border-radius:7px;background:rgba(115,94,181,.12);color:#c9baf1;padding:6px 12px;font:600 12px Oxanium;cursor:pointer}.profile-message-reply:hover{background:rgba(115,94,181,.25);color:#fff}.profile-message-actions .profile-message-delete{margin-top:0}
 .profile-message-delete{margin-top:12px;border:0;border-top:1px solid rgba(255,255,255,.05);padding:9px 0 0;background:transparent;color:#697382;font:600 10px Oxanium;cursor:pointer}
 .profile-message-delete:hover{color:#e19aa3}
@@ -666,6 +667,11 @@
           const editor=document.getElementById('profileMessageInput');
           const status=document.getElementById('messageStatus');
           if(!token()){status.textContent='Войдите в аккаунт, чтобы ответить.';return;}
+          const messageCard=button.closest('.profile-message');
+          document.querySelectorAll('.profile-message-inline-reply').forEach(node=>node.remove());
+          const replyBox=document.createElement('div');replyBox.className='profile-message-reply-box profile-message-inline-reply';
+          replyBox.innerHTML='<div class="reply-box-title">↳ ОТВЕТ НА СООБЩЕНИЕ</div><div class="reply-box-content">Ответ пользователю <b>'+esc(button.dataset.replyAuthor)+'</b></div>';
+          messageCard.appendChild(replyBox);
           editor.innerHTML='<p><b>Ответ пользователю '+esc(button.dataset.replyAuthor)+':</b> </p><p></p>';
           editor.focus();
           const range=document.createRange();range.selectNodeContents(editor.lastElementChild||editor);range.collapse(false);
