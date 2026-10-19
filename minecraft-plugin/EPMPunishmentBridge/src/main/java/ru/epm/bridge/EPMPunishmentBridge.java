@@ -1,5 +1,10 @@
 package ru.epm.bridge;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventHandler;
@@ -27,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
     private String apiUrl, apiKey, mode;
-    private long delay;
+    private long delay, rewardPollTicks;
     private final Set<String> commands = new HashSet<String>();
     private final Set<String> sent = ConcurrentHashMap.newKeySet();
 
@@ -39,6 +44,7 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
         apiKey = getConfig().getString("api-key", "");
         mode = getConfig().getString("mode", "Estamon Grief");
         delay = Math.max(1, getConfig().getLong("send-delay-ticks", 20));
+        rewardPollTicks = Math.max(20, getConfig().getLong("reward-poll-ticks", 100));
 
         commands.clear();
         for (String c : getConfig().getStringList("commands")) {
@@ -46,7 +52,10 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
         }
 
         Bukkit.getPluginManager().registerEvents(this, this);
-        getLogger().info("EPM punishment bridge enabled: " + mode);
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
+            @Override public void run() { pollRewards(); }
+        }, 40L, rewardPollTicks);
+        getLogger().info("EPM punishment/reward bridge enabled: " + mode);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -138,6 +147,118 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
             return new Date(System.currentTimeMillis() + ms);
         } catch (Exception ignored) {
             return null;
+        }
+    }
+
+
+    private void pollRewards() {
+        HttpURLConnection con = null;
+        try {
+            if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("PUT_SERVER_KEY_HERE")) return;
+            String encodedMode = java.net.URLEncoder.encode(mode, "UTF-8");
+            URL url = new URL(apiUrl + "/api/integrations/battlepass/rewards?mode=" + encodedMode);
+            con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.setConnectTimeout(7000);
+            con.setReadTimeout(7000);
+            con.setRequestProperty("X-EPM-API-Key", apiKey);
+            int code = con.getResponseCode();
+            if (code < 200 || code >= 300) {
+                getLogger().warning("Battle Pass queue returned HTTP " + code);
+                return;
+            }
+            JsonObject root = new JsonParser().parse(read(con.getInputStream())).getAsJsonObject();
+            JsonArray jobs = root.has("jobs") ? root.getAsJsonArray("jobs") : new JsonArray();
+            for (JsonElement element : jobs) {
+                if (!element.isJsonObject()) continue;
+                final JsonObject job = element.getAsJsonObject();
+                final long id = job.get("id").getAsLong();
+                final String nickname = job.get("nickname").getAsString();
+                final String rewardType = job.get("reward_type").getAsString();
+                final JsonObject payload = job.getAsJsonObject("payload");
+                Bukkit.getScheduler().runTask(this, new Runnable() {
+                    @Override public void run() {
+                        String error = executeReward(nickname, rewardType, payload);
+                        final String result = error == null ? "delivered" : "failed";
+                        final String message = error == null ? "" : error;
+                        Bukkit.getScheduler().runTaskAsynchronously(EPMPunishmentBridge.this, new Runnable() {
+                            @Override public void run() { acknowledgeReward(id, result, message); }
+                        });
+                    }
+                });
+            }
+        } catch (Exception ex) {
+            getLogger().warning("Battle Pass queue poll failed: " + ex.getMessage());
+        } finally {
+            if (con != null) con.disconnect();
+        }
+    }
+
+    private String executeReward(String nickname, String type, JsonObject payload) {
+        if (nickname == null || !nickname.matches("[A-Za-z0-9_]{3,24}")) return "Invalid player nickname";
+        if (payload == null) return "Reward payload is missing";
+        if ("currency".equals(type)) {
+            int amount = payload.has("amount") ? payload.get("amount").getAsInt() : 0;
+            if (amount < 1 || amount > 100000000) return "Invalid currency amount";
+            String template = getConfig().getString("reward-commands.currency", "").trim();
+            if (template.isEmpty()) return "Currency command is not configured";
+            return dispatchRewardCommand(template.replace("{player}", nickname).replace("{amount}", String.valueOf(amount)));
+        }
+        if ("privilege".equals(type)) {
+            String key = payload.has("group") ? payload.get("group").getAsString() : "";
+            String group = getConfig().getString("privilege-groups." + key, "").trim();
+            String template = getConfig().getString("reward-commands.privilege", "").trim();
+            if (group.isEmpty() || template.isEmpty()) return "Privilege group/command is not configured: " + key;
+            if (!group.matches("[A-Za-z0-9_-]{1,32}")) return "Invalid configured privilege group";
+            return dispatchRewardCommand(template.replace("{player}", nickname).replace("{group}", group));
+        }
+        if ("item".equals(type)) {
+            JsonArray items = payload.has("items") ? payload.getAsJsonArray("items") : new JsonArray();
+            String template = getConfig().getString("reward-commands.item", "give {player} {item} {amount}").trim();
+            if (items.size() == 0 || template.isEmpty()) return "Item reward/command is not configured";
+            for (JsonElement element : items) {
+                if (!element.isJsonObject()) return "Invalid item payload";
+                JsonObject item = element.getAsJsonObject();
+                String material = item.has("item") ? item.get("item").getAsString().toLowerCase(Locale.ROOT) : "";
+                int amount = item.has("amount") ? item.get("amount").getAsInt() : 0;
+                if (!material.matches("[a-z0-9_:.]{1,64}") || amount < 1 || amount > 2304) return "Invalid item or amount";
+                String error = dispatchRewardCommand(template.replace("{player}", nickname).replace("{item}", material).replace("{amount}", String.valueOf(amount)));
+                if (error != null) return error;
+            }
+            return null;
+        }
+        return "Unsupported reward type: " + type;
+    }
+
+    private String dispatchRewardCommand(String command) {
+        if (command == null || command.trim().isEmpty() || command.contains("{")) return "Reward command template is incomplete";
+        boolean accepted = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+        return accepted ? null : "Minecraft rejected command: " + command.split("\\s+")[0];
+    }
+
+    private void acknowledgeReward(long id, String status, String message) {
+        HttpURLConnection con = null;
+        try {
+            URL url = new URL(apiUrl + "/api/integrations/battlepass/rewards/" + id + "/complete");
+            con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("POST");
+            con.setConnectTimeout(7000);
+            con.setReadTimeout(7000);
+            con.setDoOutput(true);
+            con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            con.setRequestProperty("X-EPM-API-Key", apiKey);
+            String body = "{\"mode\":\"" + json(mode) + "\",\"status\":\"" + json(status) + "\",\"message\":\"" + json(message) + "\"}";
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            con.setFixedLengthStreamingMode(bytes.length);
+            OutputStream out = con.getOutputStream();
+            out.write(bytes);
+            out.close();
+            int code = con.getResponseCode();
+            if (code < 200 || code >= 300) getLogger().warning("Battle Pass acknowledgement returned HTTP " + code + ": " + read(con.getErrorStream()));
+        } catch (Exception ex) {
+            getLogger().warning("Battle Pass acknowledgement failed for job " + id + ": " + ex.getMessage());
+        } finally {
+            if (con != null) con.disconnect();
         }
     }
 
