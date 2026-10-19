@@ -5,6 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { pool, initDatabase } = require('./database');
+const { registerBattlePassRoutes } = require('./battlepass-rewards');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
@@ -149,6 +150,7 @@ async function auth(req,res,next) {
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   req.user=user; next();
 }
+registerBattlePassRoutes({ app, pool, auth, apiKeys: PUNISHMENT_API_KEYS });
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;delete copy.googleSub;delete copy.google_sub;delete copy.email;return copy;}
 function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
 
