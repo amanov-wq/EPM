@@ -1,72 +1,113 @@
 (()=>{
-const KEY='epmBattlePassV2';
 const rewards=[
-{level:1,icon:'🪙',name:'Стартовый капитал',desc:'Игровая валюта для первых покупок.',kind:'$10,000',money:10000},
-{level:2,icon:'🪵',name:'Набор строителя',desc:'Дубовые доски, камень и факелы.',kind:'Набор'},
+{level:1,icon:'🪙',name:'Стартовый капитал',desc:'10 000 игровой валюты на выбранном режиме.',kind:'$10,000'},
+{level:2,icon:'🪵',name:'Набор строителя',desc:'Доски, камень и факелы.',kind:'Набор'},
 {level:3,icon:'🥕',name:'Запас провизии',desc:'Еда для первых приключений.',kind:'Набор'},
 {level:4,icon:'⛏️',name:'Железный инструмент',desc:'Железная кирка для шахты.',kind:'Предмет'},
-{level:5,icon:'🪙',name:'Монеты шахтёра',desc:'Пополнение игрового баланса.',kind:'$15,000',money:15000},
-{level:6,icon:'🛡️',name:'Щит исследователя',desc:'Защита для дальних вылазок.',kind:'Предмет'},
-{level:7,icon:'💎',name:'Алмазная находка',desc:'Небольшой набор алмазов.',kind:'Ресурсы'},
-{level:8,icon:'🧪',name:'Зелья скорости',desc:'Пара зелий для путешествий.',kind:'Зелья'},
-{level:9,icon:'🪙',name:'Кошелёк авантюриста',desc:'Ещё немного валюты на рынке.',kind:'$20,000',money:20000},
-{level:10,icon:'🔥',name:'Огненный след',desc:'Редкий декоративный титул профиля.',kind:'Титул'},
-{level:11,icon:'🍯',name:'Мёд и сытость',desc:'Набор еды и полезных мелочей.',kind:'Набор'},
-{level:12,icon:'🧱',name:'Набор строителя II',desc:'Материалы для уютной базы.',kind:'Набор'},
-{level:13,icon:'🪙',name:'Клад искателя',desc:'Валюта для торговли.',kind:'$25,000',money:25000},
-{level:14,icon:'🏹',name:'Лук следопыта',desc:'Лук и стрелы для приключений.',kind:'Предметы'},
-{level:15,icon:'✨',name:'Чары путешественника',desc:'Опыт и расходники для зачарования.',kind:'Набор'},
-{level:16,icon:'🐺',name:'Друг волка',desc:'Косметический значок покорителя лесов.',kind:'Значок'},
-{level:17,icon:'🪙',name:'Золотой запас',desc:'Валюта для аукциона и магазинов.',kind:'$35,000',money:35000},
-{level:18,icon:'🧭',name:'Компас искателя',desc:'Полезный предмет для исследований.',kind:'Предмет'},
-{level:19,icon:'💠',name:'Аметистовый набор',desc:'Аметистовые блоки для декора.',kind:'Ресурсы'},
-{level:20,icon:'👑',name:'Grief — мини-привилегия',desc:'Недорогая донат-награда режима EPM Grief.',kind:'Grief · Lite',donate:true},
-{level:21,icon:'🪙',name:'Казна исследователя',desc:'Крупное пополнение баланса.',kind:'$50,000',money:50000},
-{level:22,icon:'🐎',name:'Всадник',desc:'Косметический титул для профиля.',kind:'Титул'},
-{level:23,icon:'🧰',name:'Редкий набор',desc:'Полезные материалы для базы.',kind:'Набор'},
-{level:24,icon:'💎',name:'Алмазный запас',desc:'Ресурсы для продвинутого крафта.',kind:'Ресурсы'},
-{level:25,icon:'🪙',name:'Богатство шахт',desc:'Валюта для крупных покупок.',kind:'$75,000',money:75000},
-{level:26,icon:'🪽',name:'Крылья Энда',desc:'Косметическая награда сезона.',kind:'Косметика'},
-{level:27,icon:'🧿',name:'Талисман исследователя',desc:'Коллекционный предмет.',kind:'Коллекция'},
-{level:28,icon:'🪙',name:'Сундук сокровищ',desc:'Большое пополнение баланса.',kind:'$100,000',money:100000},
-{level:29,icon:'🐉',name:'Покоритель дракона',desc:'Редкий титул финального этапа.',kind:'Титул'},
-{level:30,icon:'🏆',name:'Легенда EPM',desc:'Финальная награда сезона и 150,000 игровой валюты.',kind:'$150,000 + титул',money:150000}
+{level:5,icon:'🪙',name:'Монеты шахтёра',desc:'15 000 игровой валюты.',kind:'$15,000'},
+{level:6,icon:'🛡️',name:'Щит исследователя',desc:'Щит для дальних вылазок.',kind:'Предмет'},
+{level:7,icon:'💎',name:'Алмазная находка',desc:'Два алмаза.',kind:'Ресурсы'},
+{level:8,icon:'🧪',name:'Зелья скорости',desc:'Золотые яблоки для путешествий.',kind:'Предметы'},
+{level:9,icon:'🪙',name:'Кошелёк авантюриста',desc:'20 000 игровой валюты.',kind:'$20,000'},
+{level:10,icon:'🔥',name:'Огненный след',desc:'Фейерверки для приключений.',kind:'Предметы'},
+{level:11,icon:'🍯',name:'Мёд и сытость',desc:'Бутылочки мёда.',kind:'Набор'},
+{level:12,icon:'🧱',name:'Набор строителя II',desc:'Материалы для базы.',kind:'Набор'},
+{level:13,icon:'🪙',name:'Клад искателя',desc:'25 000 игровой валюты.',kind:'$25,000'},
+{level:14,icon:'🏹',name:'Лук следопыта',desc:'Лук и стрелы.',kind:'Предметы'},
+{level:15,icon:'✨',name:'Чары путешественника',desc:'Бутылочки опыта.',kind:'Набор'},
+{level:16,icon:'🐺',name:'Друг волка',desc:'Кости для приручения.',kind:'Предметы'},
+{level:17,icon:'🪙',name:'Золотой запас',desc:'35 000 игровой валюты.',kind:'$35,000'},
+{level:18,icon:'🧭',name:'Компас искателя',desc:'Компас для исследований.',kind:'Предмет'},
+{level:19,icon:'💠',name:'Аметистовый набор',desc:'Аметистовые осколки.',kind:'Ресурсы'},
+{level:20,icon:'👑',name:'Grief — мини-привилегия',desc:'Привилегия группы Lite, если она настроена на сервере.',kind:'Привилегия'},
+{level:21,icon:'🪙',name:'Казна исследователя',desc:'50 000 игровой валюты.',kind:'$50,000'},
+{level:22,icon:'🐎',name:'Всадник',desc:'Седло для путешествий.',kind:'Предмет'},
+{level:23,icon:'🧰',name:'Редкий набор',desc:'Сундуки и железо.',kind:'Набор'},
+{level:24,icon:'💎',name:'Алмазный запас',desc:'Восемь алмазов.',kind:'Ресурсы'},
+{level:25,icon:'🪙',name:'Богатство шахт',desc:'75 000 игровой валюты.',kind:'$75,000'},
+{level:26,icon:'🪽',name:'Крылья Энда',desc:'Элитры.',kind:'Предмет'},
+{level:27,icon:'🧿',name:'Талисман исследователя',desc:'Око Эндера.',kind:'Предметы'},
+{level:28,icon:'🪙',name:'Сундук сокровищ',desc:'100 000 игровой валюты.',kind:'$100,000'},
+{level:29,icon:'🐉',name:'Покоритель дракона',desc:'Привилегия группы Legend, если она настроена.',kind:'Привилегия'},
+{level:30,icon:'🏆',name:'Легенда EPM',desc:'150 000 игровой валюты.',kind:'$150,000'}
 ];
 const premiumRewards=[
-{level:3,icon:'✨',name:'Аура незера',desc:'Эксклюзивный визуальный стиль сезона.',kind:'Косметика'},
-{level:6,icon:'🪙',name:'Золотой запас',desc:'Бонусная игровая валюта.',kind:'Бонус'},
-{level:9,icon:'🛡️',name:'Реликтовый комплект',desc:'Тематический набор для приключений.',kind:'Набор'},
-{level:12,icon:'💜',name:'Премиум-титул',desc:'Особая отметка владельца пропуска.',kind:'Титул'},
-{level:15,icon:'💎',name:'Кристаллы сезона',desc:'Ценная награда на середине пути.',kind:'Ресурсы'},
-{level:18,icon:'🔥',name:'Пламенный след',desc:'Редкая сезонная косметика.',kind:'Косметика'},
-{level:21,icon:'👑',name:'Королевский набор',desc:'Премиальный комплект наград.',kind:'Набор'},
-{level:24,icon:'🌌',name:'Звёздный эффект',desc:'Уникальный коллекционный эффект.',kind:'Косметика'},
-{level:27,icon:'🐉',name:'Драконий титул',desc:'Редкий титул для профиля.',kind:'Титул'},
-{level:30,icon:'🏆',name:'EPM Premium Legend',desc:'Главная эксклюзивная награда сезона.',kind:'Эксклюзив'}
+{level:3,icon:'✨',name:'Аура незера',desc:'Звезда Незера.',kind:'Предмет'},
+{level:6,icon:'🪙',name:'Золотой запас',desc:'10 000 игровой валюты.',kind:'$10,000'},
+{level:9,icon:'🛡️',name:'Реликтовый комплект',desc:'Зачарованные золотые яблоки.',kind:'Набор'},
+{level:12,icon:'💜',name:'Премиум-привилегия',desc:'Привилегия группы Premium.',kind:'Привилегия'},
+{level:15,icon:'💎',name:'Кристаллы сезона',desc:'Шестнадцать алмазов.',kind:'Ресурсы'},
+{level:18,icon:'🔥',name:'Пламенный след',desc:'Порошок ифрита.',kind:'Предметы'},
+{level:21,icon:'👑',name:'Королевский набор',desc:'Тотем бессмертия.',kind:'Предмет'},
+{level:24,icon:'🌌',name:'Звёздный эффект',desc:'Шалкеровый ящик.',kind:'Предмет'},
+{level:27,icon:'🐉',name:'Драконий титул',desc:'Привилегия группы Dragon.',kind:'Привилегия'},
+{level:30,icon:'🏆',name:'EPM Premium Legend',desc:'Привилегия Premium Legend.',kind:'Привилегия'}
 ];
-let state=load();
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');return{xp:Math.max(0,Number(s.xp)||0),balance:Math.max(10000,Number(s.balance)||10000),claimed:Array.isArray(s.claimed)?s.claimed.map(Number):[]}}catch{return{xp:0,balance:10000,claimed:[]}}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-function level(){return Math.min(30,1+Math.floor(state.xp/1000))}
-function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
-function render(){const lv=level(),within=lv===30?1000:state.xp%1000;document.getElementById('level').textContent=lv;document.getElementById('xpText').textContent=(lv===30?1000:within)+' / 1000 XP';document.getElementById('nextText').textContent=lv===30?'Максимальный уровень':'До уровня '+(lv+1);document.getElementById('progress').style.width=(lv===30?100:within/10)+'%';document.getElementById('balance').textContent='$'+state.balance.toLocaleString('en-US');document.getElementById('claimedCount').textContent=state.claimed.length;document.getElementById('rewards').innerHTML=rewards.map(r=>{const unlocked=lv>=r.level,claimed=state.claimed.includes(r.level);return '<article class="bp-reward '+(!unlocked?'locked ':'')+(claimed?'claimed':'')+'"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><button class="bp-btn '+(unlocked&&!claimed?'primary':'')+'" data-claim="'+r.level+'" '+(!unlocked||claimed?'disabled':'')+'>'+(claimed?'Получено':unlocked?'Забрать':'🔒 Закрыто')+'</button></div></article>'}).join('');document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim(Number(b.dataset.claim)))}
-function claim(lv){const r=rewards.find(x=>x.level===lv);if(!r||level()<lv||state.claimed.includes(lv))return;if(r.money)state.balance+=r.money;state.claimed.push(lv);save();render();toast(r.donate?'Награда отмечена. Для выдачи привилегии обратись к администрации.':'Награда получена!')}
-document.getElementById('claimAll').onclick=()=>{let count=0;rewards.filter(r=>r.level<=level()&&!state.claimed.includes(r.level)).forEach(r=>{if(r.money)state.balance+=r.money;state.claimed.push(r.level);count++});save();render();toast(count?'Получено наград: '+count:'Пока нет новых наград')};
-render();
-function renderPremium(){
- const root=document.getElementById('premiumRewards');
- if(!root)return;
- root.innerHTML=premiumRewards.map(r=>'<article class="bp-premium-reward"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><span class="bp-chip" style="background:#392b15;color:#ffdf8d">PREMIUM</span></div></article>').join('');
+const state={xp:0,level:1,premium:false,claims:[]};
+const modeEl=document.getElementById('rewardMode');
+const token=()=>localStorage.getItem('epmToken')||'';
+const claimed=(track,level)=>state.claims.some(c=>c.track===track&&Number(c.level)===level&&c.mode===modeEl.value&&c.status!=='failed');
+function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),3200)}
+async function loadState(){
+ if(!token()){toast('Войди в аккаунт EPM, чтобы получать награды.');render();return}
+ try{
+  const response=await fetch('/api/battlepass/state',{headers:{Authorization:'Bearer '+token()},cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Не удалось загрузить прогресс');
+  state.xp=Number(data.xp)||0;state.level=Number(data.level)||1;state.premium=Boolean(data.premium);state.claims=Array.isArray(data.claims)?data.claims:[];
+  render();
+ }catch(error){toast(error.message||'Ошибка загрузки Battle Pass');render()}
 }
-renderPremium();
-const buyPremium=document.getElementById('buyPremium');
-const premiumModal=document.getElementById('premiumModal');
-const closePremiumModal=document.getElementById('closePremiumModal');
-function openPremiumModal(){if(!premiumModal)return;premiumModal.hidden=false;document.body.style.overflow='hidden';closePremiumModal?.focus()}
-function hidePremiumModal(){if(!premiumModal)return;premiumModal.hidden=true;document.body.style.overflow='';buyPremium?.focus()}
-buyPremium?.addEventListener('click',openPremiumModal);
-closePremiumModal?.addEventListener('click',hidePremiumModal);
-document.getElementById('premiumNotReady')?.addEventListener('click',hidePremiumModal);
-premiumModal?.addEventListener('click',e=>{if(e.target===premiumModal)hidePremiumModal()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&premiumModal&&!premiumModal.hidden)hidePremiumModal()});
+function render(){
+ const lv=state.level,within=lv===30?1000:state.xp%1000;
+ document.getElementById('level').textContent=lv;
+ document.getElementById('xpText').textContent=within+' / 1000 XP';
+ document.getElementById('nextText').textContent=lv===30?'Максимальный уровень':'До уровня '+(lv+1);
+ document.getElementById('progress').style.width=(lv===30?100:within/10)+'%';
+ document.getElementById('balance').textContent='В игре';
+ document.getElementById('claimedCount').textContent=state.claims.length;
+ document.getElementById('rewards').innerHTML=rewards.map(r=>{
+  const unlocked=lv>=r.level,wasClaimed=claimed('free',r.level);
+  return '<article class="bp-reward '+(!unlocked?'locked ':'')+(wasClaimed?'claimed':'')+'"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><button class="bp-btn '+(unlocked&&!wasClaimed?'primary':'')+'" data-claim="'+r.level+'" '+(!unlocked||wasClaimed?'disabled':'')+'>'+(wasClaimed?'В очереди / получено':unlocked?'Забрать':'🔒 Закрыто')+'</button></div></article>'
+ }).join('');
+ document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim('free',Number(b.dataset.claim)));
+ document.getElementById('claimAll').disabled=!token();
+ const premiumRoot=document.getElementById('premiumRewards');
+ premiumRoot.innerHTML=premiumRewards.map(r=>{
+  const unlocked=lv>=r.level,wasClaimed=claimed('premium',r.level),disabled=!state.premium||!unlocked||wasClaimed;
+  const label=!state.premium?'После активации':wasClaimed?'В очереди / получено':unlocked?'Забрать':'🔒 Закрыто';
+  return '<article class="bp-premium-reward"><div class="bp-reward-top"><span class="bp-tier">УРОВЕНЬ '+String(r.level).padStart(2,'0')+'</span><div class="bp-icon">'+r.icon+'</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="bp-reward-foot"><strong>'+r.kind+'</strong><button class="bp-btn '+(!disabled?'primary':'')+'" data-premium-claim="'+r.level+'" '+(disabled?'disabled':'')+'>'+label+'</button></div></article>'
+ }).join('');
+ document.querySelectorAll('[data-premium-claim]').forEach(b=>b.onclick=()=>claim('premium',Number(b.dataset.premiumClaim)));
+}
+async function claim(track,level){
+ if(!token()){toast('Сначала войди в аккаунт EPM.');return}
+ const button=document.querySelector((track==='free'?'[data-claim="':'[data-premium-claim="')+level+'"]');
+ if(button){button.disabled=true;button.textContent='Отправка…'}
+ try{
+  const response=await fetch('/api/battlepass/claim',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token()},body:JSON.stringify({track,level,mode:modeEl.value}),cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Не удалось запросить награду');
+  state.claims.push({track,level,mode:modeEl.value,status:'queued'});
+  render();toast('Награда поставлена в очередь. Зайди на '+modeEl.value+'.');
+ }catch(error){if(button){button.disabled=false;button.textContent='Забрать'}toast(error.message||'Ошибка выдачи награды');await loadState()}
+}
+document.getElementById('claimAll').addEventListener('click',async()=>{
+ const available=rewards.filter(r=>r.level<=state.level&&!claimed('free',r.level));
+ if(!available.length){toast('Нет новых наград на выбранном режиме.');return}
+ for(const reward of available)await claim('free',reward.level);
+});
+modeEl.addEventListener('change',render);
+render();
+loadState();
+function renderPremiumModal(){
+ const buyPremium=document.getElementById('buyPremium'),modal=document.getElementById('premiumModal'),close=document.getElementById('closePremiumModal');
+ function open(){if(!modal)return;modal.hidden=false;document.body.style.overflow='hidden';close?.focus()}
+ function hide(){if(!modal)return;modal.hidden=true;document.body.style.overflow='';buyPremium?.focus()}
+ buyPremium?.addEventListener('click',open);close?.addEventListener('click',hide);
+ document.getElementById('premiumNotReady')?.addEventListener('click',hide);
+ modal?.addEventListener('click',e=>{if(e.target===modal)hide()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&!modal.hidden)hide()});
+}
+renderPremiumModal();
 })();
