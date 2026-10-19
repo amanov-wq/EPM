@@ -19,4 +19,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: epm-punishment-bridge
-          path: minecraft-plugin/EPMPunishmentBridge/target/epm-punishment-bridge-1.0.0.jar
+          path: minecraft-plugin/EPMPunishmentBridge/target/epm-punishment-bridge-1.1.0.jar
