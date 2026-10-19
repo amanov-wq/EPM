@@ -1,6 +1,6 @@
 name: EPMPunishmentBridge
-version: 1.0.0
+version: 1.1.0
 main: ru.epm.bridge.EPMPunishmentBridge
 api-version: "1.13"
 author: EPM
-description: Sends Minecraft bans to the EPM punishment history.
+description: Syncs punishments and delivers EPM Battle Pass rewards.
