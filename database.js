@@ -156,6 +156,44 @@ async function initDatabase() {
     ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS server TEXT NOT NULL DEFAULT 'EPM';
     ALTER TABLE punishment_history ADD COLUMN IF NOT EXISTS external_id TEXT;
     CREATE UNIQUE INDEX IF NOT EXISTS punishment_history_external_id_idx ON punishment_history(external_id) WHERE external_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS battlepass_profiles (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      season INTEGER NOT NULL DEFAULT 1,
+      xp INTEGER NOT NULL DEFAULT 0 CHECK (xp >= 0),
+      premium BOOLEAN NOT NULL DEFAULT FALSE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS battlepass_claims (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      season INTEGER NOT NULL DEFAULT 1,
+      track TEXT NOT NULL CHECK (track IN ('free','premium')),
+      level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 30),
+      mode TEXT NOT NULL,
+      reward_key TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','delivered','failed')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      delivered_at TIMESTAMPTZ,
+      UNIQUE(user_id, season, track, level, mode)
+    );
+    CREATE TABLE IF NOT EXISTS battlepass_reward_queue (
+      id BIGSERIAL PRIMARY KEY,
+      claim_id BIGINT NOT NULL UNIQUE REFERENCES battlepass_claims(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nickname TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      reward_key TEXT NOT NULL,
+      reward_type TEXT NOT NULL CHECK (reward_type IN ('item','currency','privilege')),
+      payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','delivered','failed')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      delivered_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS battlepass_queue_mode_status_idx ON battlepass_reward_queue(mode,status,created_at);
   `);
 
   // Keep the database default aligned with EPM registration: new accounts start as Пользователь.
