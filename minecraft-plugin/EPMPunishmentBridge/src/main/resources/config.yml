@@ -15,3 +15,22 @@ commands:
 
 # Delay after the command before sending the record.
 send-delay-ticks: 20
+
+# Battle Pass reward queue. The bridge polls EPM every 5 seconds.
+reward-poll-ticks: 100
+
+# Configure these for the plugins actually installed on THIS server.
+# Leave currency/privilege blank until verified; an unconfigured reward fails safely.
+reward-commands:
+  item: "give {player} {item} {amount}"
+  currency: ""
+  privilege: ""
+
+# Values must be the real permission groups on this server.
+# Example only: set "lite: vip" ONLY if the server really has a "vip" group.
+privilege-groups:
+  lite: ""
+  premium: ""
+  legend: ""
+  dragon: ""
+  premium_legend: ""
