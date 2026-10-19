@@ -105,11 +105,30 @@ function registerBattlePassRoutes({ app, pool, auth, apiKeys }) {
         'INSERT INTO battlepass_claims(user_id,season,track,level,mode,reward_key) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,season,track,level,mode) DO NOTHING RETURNING id',
         [req.user.id, profile.season, track, level, mode, track + '-' + String(level).padStart(2, '0')]
       );
-      if (!claim.rows[0]) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'Эта награда уже запрошена в выбранном режиме' }); }
+      let claimId;
+      if (claim.rows[0]) {
+        claimId = claim.rows[0].id;
+      } else {
+        const existing = (await client.query(
+          `SELECT c.id,c.status,q.id AS queue_id,q.status AS queue_status
+           FROM battlepass_claims c JOIN battlepass_reward_queue q ON q.claim_id=c.id
+           WHERE c.user_id=$1 AND c.season=$2 AND c.track=$3 AND c.level=$4 AND c.mode=$5
+           FOR UPDATE OF c,q`,
+          [req.user.id, profile.season, track, level, mode]
+        )).rows[0];
+        if (!existing || (existing.status !== 'failed' && existing.queue_status !== 'failed')) {
+          await client.query('ROLLBACK');
+          return res.status(409).json({ error: 'Эта награда уже запрошена в выбранном режиме' });
+        }
+        await client.query("UPDATE battlepass_reward_queue SET status='pending',attempts=0,last_error='',updated_at=NOW(),delivered_at=NULL WHERE id=$1", [existing.queue_id]);
+        await client.query("UPDATE battlepass_claims SET status='queued',delivered_at=NULL WHERE id=$1", [existing.id]);
+        await client.query('COMMIT');
+        return res.status(202).json({ ok: true, queued: true, queueId: existing.queue_id, status: 'pending', message: 'Повторная попытка выдачи поставлена в очередь.' });
+      }
       const rewardKey = track + '-' + String(level).padStart(2, '0');
       const queue = await client.query(
         'INSERT INTO battlepass_reward_queue(claim_id,user_id,nickname,mode,reward_key,reward_type,payload) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb) RETURNING id,status',
-        [claim.rows[0].id, req.user.id, req.user.nickname, mode, rewardKey, reward.type, JSON.stringify(reward)]
+        [claimId, req.user.id, req.user.nickname, mode, rewardKey, reward.type, JSON.stringify(reward)]
       );
       await client.query('COMMIT');
       return res.status(202).json({ ok: true, queued: true, queueId: queue.rows[0].id, status: queue.rows[0].status, message: 'Награда поставлена в очередь. Зайди на выбранный сервер, чтобы получить её.' });
