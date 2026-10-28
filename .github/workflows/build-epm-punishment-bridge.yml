@@ -1,4 +1,4 @@
-name: Build EPM Punishment Bridge
+name: Build EPM Unified Bridge
 on:
   workflow_dispatch:
   push:
@@ -18,5 +18,5 @@ jobs:
       - run: mvn -B clean package -f minecraft-plugin/EPMPunishmentBridge/pom.xml
       - uses: actions/upload-artifact@v4
         with:
-          name: epm-punishment-bridge
-          path: minecraft-plugin/EPMPunishmentBridge/target/epm-punishment-bridge-1.1.0.jar
+          name: epm-unified-bridge
+          path: minecraft-plugin/EPMPunishmentBridge/target/epm-punishment-bridge-1.2.0.jar
