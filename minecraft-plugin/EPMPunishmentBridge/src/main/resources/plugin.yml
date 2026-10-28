@@ -1,6 +1,6 @@
 name: EPMPunishmentBridge
-version: 1.1.0
+version: 1.2.0
 main: ru.epm.bridge.EPMPunishmentBridge
 api-version: "1.13"
 author: EPM
-description: Syncs punishments and delivers EPM Battle Pass rewards.
+description: Unified EPM bridge for forum-based Battle Pass rewards and punishment sync.
