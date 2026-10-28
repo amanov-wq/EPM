@@ -22,7 +22,7 @@ Copy the same JAR into the plugins folder on each server and start each server o
 - Creative: mode: "Estamon Creative"
 - Survial: mode: "Estamon Survial"
 
-Each server needs its own matching API key. Never publish keys or reuse a key between modes. Render environment variables are EPM_GRIEF_API_KEY, EPM_CREATIVE_API_KEY, EPM_SURVIVAL_API_KEY and EPM_BLOOD_API_KEY.
+Each server needs a matching punishment key in `api-key` and a matching Battle Pass key in `battlepass-api-key`. Set `battlepass-api-key` from that server's `EPM_*_BP_API_KEY` Render variable. Never publish keys or reuse a key between modes. For punishment sync, use the existing EPM_GRIEF_API_KEY, EPM_CREATIVE_API_KEY, EPM_SURVIVAL_API_KEY and EPM_BLOOD_API_KEY variables. Battle Pass uses separate keys: EPM_GRIEF_BP_API_KEY, EPM_CREATIVE_BP_API_KEY, EPM_SURVIAL_BP_API_KEY and EPM_BLOOD_BP_API_KEY.
 
 ## Battle Pass XP
 
