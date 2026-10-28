@@ -1,5 +1,7 @@
 api-url: "https://epmofficial.onrender.com"
-api-key: "PUT_SERVER_KEY_HERE"
+api-key: "PUT_PUNISHMENT_KEY_HERE"
+# Dedicated Battle Pass key; set the matching EPM_*_BP_API_KEY value here on each server.
+battlepass-api-key: "PUT_SERVER_KEY_HERE"
 mode: "Estamon Grief"
 
 # Commands watched by the bridge.
