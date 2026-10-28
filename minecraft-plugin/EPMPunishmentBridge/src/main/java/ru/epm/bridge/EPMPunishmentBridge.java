@@ -247,7 +247,7 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
             con.setReadTimeout(7000);
             con.setDoOutput(true);
             con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            con.setRequestProperty("X-EPM-API-Key", apiKey);
+            con.setRequestProperty("X-EPM-API-Key", battlePassApiKey);
             String body = "{\"mode\":\"" + json(mode) + "\",\"status\":\"" + json(status) + "\",\"message\":\"" + json(message) + "\"}";
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             con.setFixedLengthStreamingMode(bytes.length);
