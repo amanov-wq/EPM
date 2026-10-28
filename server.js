@@ -16,6 +16,15 @@ const PUNISHMENT_API_KEYS = Object.freeze({
   'Blood Shed World': process.env.EPM_BLOOD_API_KEY || '',
   'BloodShedWorld': process.env.EPM_BLOOD_API_KEY || ''
 });
+// Battle Pass keys are separate from punishment bridge keys. Each Minecraft mode
+// must use the matching BP key configured in Render and in that server's plugin config.
+const BATTLEPASS_API_KEYS = Object.freeze({
+  'Estamon Grief': process.env.EPM_GRIEF_BP_API_KEY || '',
+  'Estamon Creative': process.env.EPM_CREATIVE_BP_API_KEY || '',
+  'Estamon Survial': process.env.EPM_SURVIAL_BP_API_KEY || '',
+  'BloodShedWorld': process.env.EPM_BLOOD_BP_API_KEY || '',
+  'Blood Shed World': process.env.EPM_BLOOD_BP_API_KEY || ''
+});
 const PUNISHMENT_MODES = Object.freeze(['Estamon Grief','Estamon Creative','Estamon Survial','BloodShedWorld','Blood Shed World']);
 const SERVER_MODES=Object.freeze([{mode:'Estamon Grief',version:'1.19.4',plugin:'AdvancedBan',host:process.env.EPM_GRIEF_HOST||'EstamonHost.ru',port:Number(process.env.EPM_GRIEF_PORT||25565)},{mode:'Estamon Creative',version:'1.21.4',plugin:'Essentials',host:process.env.EPM_CREATIVE_HOST||'EstamonHost.ru',port:Number(process.env.EPM_CREATIVE_PORT||25565)},{mode:'Estamon Survial',version:'1.16.5',plugin:'Essentials',host:process.env.EPM_SURVIVAL_HOST||'EstamonHost.ru',port:Number(process.env.EPM_SURVIVAL_PORT||25565)},{mode:'BloodShedWorld',version:process.env.EPM_BLOOD_VERSION||'',plugin:'Essentials',host:process.env.EPM_BLOOD_HOST||'EstamonHost.ru',port:Number(process.env.EPM_BLOOD_PORT||25565)}]);
 function serverModeConfig(mode){const canonical=String(mode||'').trim()==='Blood Shed World'?'BloodShedWorld':String(mode||'').trim();return SERVER_MODES.find(x=>x.mode===canonical)||null}
@@ -150,7 +159,7 @@ async function auth(req,res,next) {
   if(Boolean(user.blocked))return res.status(403).json({error:'Аккаунт заблокирован'});
   req.user=user; next();
 }
-registerBattlePassRoutes({ app, pool, auth, apiKeys: PUNISHMENT_API_KEYS });
+registerBattlePassRoutes({ app, pool, auth, apiKeys: BATTLEPASS_API_KEYS });
 function safeUser(user){if(!user)return null;const copy={...user};delete copy.password;delete copy.googleSub;delete copy.google_sub;delete copy.email;return copy;}
 function publicAuthor(user){if(!user)return null;return{id:user.id,nickname:user.nickname,role:user.role||'Пользователь',avatar:user.avatar||''};}
 
