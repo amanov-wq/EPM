@@ -6,10 +6,10 @@ The repository builds one shared JAR for every EPM mode. Install the same epm-pu
 
 | EPM mode | Render environment variable | Plugin mode |
 |---|---|---|
-| Estamon Grief | EPM_GRIEF_API_KEY | Estamon Grief |
-| Estamon Creative | EPM_CREATIVE_API_KEY | Estamon Creative |
-| Estamon Survial | EPM_SURVIVAL_API_KEY | Estamon Survial |
-| BloodShedWorld | EPM_BLOOD_API_KEY | BloodShedWorld |
+| Estamon Grief | EPM_GRIEF_BP_API_KEY | Estamon Grief |
+| Estamon Creative | EPM_CREATIVE_BP_API_KEY | Estamon Creative |
+| Estamon Survial | EPM_SURVIAL_BP_API_KEY | Estamon Survial |
+| Blood Shed World | EPM_BLOOD_BP_API_KEY | BloodShedWorld |
 
 ## Build and install
 
