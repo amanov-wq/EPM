@@ -31,7 +31,7 @@ import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
-    private String apiUrl, apiKey, mode;
+    private String apiUrl, apiKey, battlePassApiKey, mode;
     private long delay, rewardPollTicks;
     private final Set<String> commands = new HashSet<String>();
     private final Set<String> sent = ConcurrentHashMap.newKeySet();
@@ -42,6 +42,7 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
         reloadConfig();
         apiUrl = getConfig().getString("api-url", "https://epmofficial.onrender.com").replaceAll("/+$", "");
         apiKey = getConfig().getString("api-key", "");
+        battlePassApiKey = getConfig().getString("battlepass-api-key", apiKey);
         mode = getConfig().getString("mode", "Estamon Grief");
         delay = Math.max(1, getConfig().getLong("send-delay-ticks", 20));
         rewardPollTicks = Math.max(20, getConfig().getLong("reward-poll-ticks", 100));
@@ -154,14 +155,14 @@ public final class EPMPunishmentBridge extends JavaPlugin implements Listener {
     private void pollRewards() {
         HttpURLConnection con = null;
         try {
-            if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("PUT_SERVER_KEY_HERE")) return;
+            if (battlePassApiKey == null || battlePassApiKey.trim().isEmpty() || battlePassApiKey.equals("PUT_SERVER_KEY_HERE")) return;
             String encodedMode = java.net.URLEncoder.encode(mode, "UTF-8");
             URL url = new URL(apiUrl + "/api/integrations/battlepass/rewards?mode=" + encodedMode);
             con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
             con.setConnectTimeout(7000);
             con.setReadTimeout(7000);
-            con.setRequestProperty("X-EPM-API-Key", apiKey);
+            con.setRequestProperty("X-EPM-API-Key", battlePassApiKey);
             int code = con.getResponseCode();
             if (code < 200 || code >= 300) {
                 getLogger().warning("Battle Pass queue returned HTTP " + code);
